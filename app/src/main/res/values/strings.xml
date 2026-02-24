@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Claude Usage</string>
+    <string name="widget_description">Shows Claude AI usage metrics</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Claude Usage</string>
+    <string name="session_label">Session (5h)</string>
+    <string name="weekly_label">Weekly (7d)</string>
+    <string name="opus_label">Opus (7d)</string>
+    <string name="sonnet_label">Sonnet (7d)</string>
+    <string name="last_updated">Last updated: %1$s</string>
+    <string name="no_data">No data available</string>
+    <string name="not_configured_title">Not Configured</string>
+    <string name="not_configured_message">Add your Claude session key in Settings to get started.</string>
+    <string name="go_to_settings">Go to Settings</string>
+    <string name="resets_in">Resets in %1$s</string>
+    <string name="expired">Expired</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="session_key_label">Session Key</string>
+    <string name="session_key_hint">sk-ant-sid01-…</string>
+    <string name="validate_button">Validate</string>
+    <string name="validating">Validating…</string>
+    <string name="organization_label">Organization</string>
+    <string name="select_organization">Select organization</string>
+    <string name="refresh_interval_label">Refresh Interval</string>
+    <string name="refresh_interval_value">%1$d seconds</string>
+    <string name="clear_data">Clear All Data</string>
+    <string name="clear_data_confirm_title">Clear Data?</string>
+    <string name="clear_data_confirm_message">This will remove your session key and all cached data. You will need to re-enter your credentials.</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="session_key_saved">Session key validated and saved</string>
+    <string name="paste">Paste</string>
+
+    <!-- Errors -->
+    <string name="error_unauthorized">Session key is invalid or expired. Please update it in Settings.</string>
+    <string name="error_rate_limited">Rate limited. Please wait before trying again.</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="error_server">Server error (%1$d). Please try again later.</string>
+    <string name="error_unknown">An unexpected error occurred.</string>
+    <string name="retry">Retry</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_session_reset">Session Reset</string>
+    <string name="notification_channel_description">Notifies when your Claude session limit resets</string>
+    <string name="notification_session_reset_title">Session limit reset</string>
+    <string name="notification_session_reset_body">Claude is ready to use again</string>
+
+    <!-- Widget -->
+    <string name="widget_configure">Configure in app</string>
+    <string name="widget_loading">Loading…</string>
+
+    <!-- Session Key Instructions -->
+    <string name="session_key_instructions">To get your session key:\n1. Open claude.ai in your browser\n2. Open Developer Tools (F12)\n3. Go to Application → Cookies\n4. Find the \"sessionKey\" cookie\n5. Copy its value (starts with sk-ant-sid01-)</string>
+</resources>

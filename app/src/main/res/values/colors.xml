@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary -->
+    <color name="primary">#FF6750A4</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="primary_container">#FFEADDFF</color>
+
+    <!-- Status Colors -->
+    <color name="status_safe">#FF4CAF50</color>
+    <color name="status_moderate">#FFFFA726</color>
+    <color name="status_critical">#FFE53935</color>
+
+    <!-- Launcher icon -->
+    <color name="ic_launcher_background">#FF0E1016</color>
+
+    <!-- Widget -->
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_background_dark">#FF1C1B1F</color>
+    <color name="widget_text">#FF1C1B1F</color>
+    <color name="widget_text_dark">#FFE6E1E5</color>
+    <color name="widget_progress_track">#FFE0E0E0</color>
+    <color name="widget_progress_track_dark">#FF3C3C3C</color>
+</resources>
