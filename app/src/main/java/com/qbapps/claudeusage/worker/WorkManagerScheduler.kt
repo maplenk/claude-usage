@@ -86,6 +86,7 @@ class WorkManagerScheduler @Inject constructor(
         workManager.cancelAllWorkByTag(UsageSyncWorker.TAG_ONE_TIME)
         workManager.cancelAllWorkByTag(UsageSyncWorker.TAG_PERIODIC)
         workManager.cancelUniqueWork(UsageSyncWorker.WORK_NAME_CHAIN)
+        workManager.cancelUniqueWork(UsageSyncWorker.WORK_NAME_NEXT)
         workManager.cancelUniqueWork("usage_sync_periodic")
     }
 }

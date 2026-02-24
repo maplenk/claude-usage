@@ -40,14 +40,14 @@ class UsageSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        SyncLog.d(appContext, "doWork() started  attempt=$runAttemptCount")
+        SyncLog.d(appContext, "doWork() started  attempt=$runAttemptCount  stopped=$isStopped")
 
         // Snapshot the current cached utilization before the fetch overwrites it
         val previousFiveHour = usageDataStore.cachedUsage.first()?.fiveHour?.utilization
 
         val result = usageRepository.fetchUsage()
 
-        return if (result.isSuccess) {
+        if (result.isSuccess) {
             val newUsage = result.getOrNull()
             val pct = newUsage?.fiveHour?.utilization
             SyncLog.d(appContext, "fetch OK  session=${pct?.let { "%.1f%%".format(it) } ?: "null"}")
@@ -67,20 +67,17 @@ class UsageSyncWorker @AssistedInject constructor(
                     notificationHelper.notifySessionReset()
                 }
             }
-
-            // Enqueue the next sync after the configured interval
-            scheduleNextSync()
-
-            Result.success()
         } else {
             val error = result.exceptionOrNull()
             SyncLog.d(appContext, "fetch FAILED  error=${error?.message ?: "unknown"}")
-
-            // On failure, still schedule the next sync so the chain
-            // doesn't break, then let WorkManager apply back-off.
-            scheduleNextSync()
-            Result.retry()
         }
+
+        // Always schedule the next sync so the chain never breaks.
+        // We return success() in all cases — rescheduling is handled by us,
+        // not by WorkManager's retry/backoff mechanism.
+        scheduleNextSync()
+        SyncLog.d(appContext, "doWork() finished  stopped=$isStopped")
+        return Result.success()
     }
 
     /**
@@ -102,9 +99,11 @@ class UsageSyncWorker @AssistedInject constructor(
             .addTag(TAG_ONE_TIME)
             .build()
 
+        // Use WORK_NAME_NEXT (not WORK_NAME_CHAIN) so we don't REPLACE
+        // the currently-running worker, which would cancel it mid-execution.
         WorkManager.getInstance(appContext)
             .enqueueUniqueWork(
-                WORK_NAME_CHAIN,
+                WORK_NAME_NEXT,
                 ExistingWorkPolicy.REPLACE,
                 request
             )
@@ -114,5 +113,6 @@ class UsageSyncWorker @AssistedInject constructor(
         const val TAG_ONE_TIME = "usage_sync"
         const val TAG_PERIODIC = "usage_sync_periodic"
         const val WORK_NAME_CHAIN = "usage_sync_chain"
+        const val WORK_NAME_NEXT = "usage_sync_next"
     }
 }

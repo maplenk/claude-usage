@@ -1,5 +1,10 @@
 package com.qbapps.claudeusage.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,11 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.qbapps.claudeusage.ui.settings.components.RefreshIntervalSlider
 import com.qbapps.claudeusage.ui.settings.components.SessionKeyInput
+import com.qbapps.claudeusage.worker.SyncLog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,6 +164,34 @@ fun SettingsScreen(
                 }
             }
 
+            // --- Battery Optimization ---
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Background Refresh",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                BatteryOptimizationSection()
+            }
+
+            // --- Debug Log ---
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Debug",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ExportLogSection()
+            }
+
             // --- Clear Data ---
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -239,6 +275,71 @@ private fun OrganizationDropdown(
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BatteryOptimizationSection() {
+    val context = LocalContext.current
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    var isOptimized by remember {
+        mutableStateOf(!powerManager.isIgnoringBatteryOptimizations(context.packageName))
+    }
+
+    Column {
+        Text(
+            text = if (isOptimized) {
+                "Battery optimization is ON. Android may delay or skip background refreshes. Disable it for reliable widget updates."
+            } else {
+                "Battery optimization is disabled for this app. Background refreshes should work reliably."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (isOptimized) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
+                    // Re-check after returning (approximate; lifecycle-aware would be better)
+                    isOptimized = !powerManager.isIgnoringBatteryOptimizations(context.packageName)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Disable Battery Optimization")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportLogSection() {
+    val context = LocalContext.current
+
+    Column {
+        Text(
+            text = "Export the background sync debug log for troubleshooting.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = {
+                val logText = SyncLog.getLog(context)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Claude Usage - Sync Debug Log")
+                    putExtra(Intent.EXTRA_TEXT, logText)
+                }
+                context.startActivity(Intent.createChooser(intent, "Share debug log"))
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Export Debug Log")
         }
     }
 }
