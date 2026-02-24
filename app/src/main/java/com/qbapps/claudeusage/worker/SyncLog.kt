@@ -2,6 +2,7 @@ package com.qbapps.claudeusage.worker
 
 import android.content.Context
 import android.util.Log
+import com.qbapps.claudeusage.BuildConfig
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -26,7 +27,9 @@ object SyncLog {
     fun d(context: Context, message: String) {
         val ts = formatter.format(Instant.now())
         val line = "$ts  $message"
-        Log.d(TAG, message)
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, message)
+        }
         appendToFile(context, line)
     }
 

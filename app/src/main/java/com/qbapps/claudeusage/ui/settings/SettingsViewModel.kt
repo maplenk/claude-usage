@@ -53,6 +53,15 @@ class SettingsViewModel @Inject constructor(
         val key = _uiState.value.sessionKeyInput.trim()
         if (key.isBlank()) return
 
+        if (!key.startsWith("sk-ant-")) {
+            _uiState.update { it.copy(validationError = "Key must start with sk-ant-") }
+            return
+        }
+        if (key.length < 40) {
+            _uiState.update { it.copy(validationError = "Key appears too short") }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isValidating = true, validationError = null) }
 
@@ -161,6 +170,6 @@ class SettingsViewModel @Inject constructor(
 
     private fun maskKey(key: String): String {
         if (key.length <= 8) return "****"
-        return key.take(4) + "****" + key.takeLast(4)
+        return key.take(7) + "*".repeat(key.length - 11) + key.takeLast(4)
     }
 }

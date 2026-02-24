@@ -25,9 +25,18 @@ class UsageRepositoryImpl @Inject constructor(
     private val usageDataStore: UsageDataStore
 ) : UsageRepository {
 
+    /** Minimum interval between fetches to avoid hammering the API. */
+    private val minFetchIntervalMs = 5_000L
+    @Volatile private var lastFetchTimeMs = 0L
+
     override val cachedUsage: Flow<ClaudeUsage?> = usageDataStore.cachedUsage
 
     override suspend fun fetchUsage(): Result<ClaudeUsage> {
+        val now = System.currentTimeMillis()
+        if (now - lastFetchTimeMs < minFetchIntervalMs) {
+            return Result.failure(usageError(UsageError.RateLimited))
+        }
+        lastFetchTimeMs = now
         val sessionKey = credentialStore.getSessionKey()
             ?: return Result.failure(usageError(UsageError.NoCredentials))
 
