@@ -169,6 +169,19 @@ All versions managed in `gradle/libs.versions.toml`:
 - **Security Crypto** 1.1.0-alpha06 (EncryptedSharedPreferences)
 - **Min SDK** 26 (Android 8.0) | **Target SDK** 35
 
+## Extract Your Session Key
+
+1. Open Claude AI
+   Navigate to `https://claude.ai` in your browser and make sure you're logged in.
+2. Open Developer Tools
+   Chrome/Edge: press `F12` or `Cmd+Option+I` (macOS) / `Ctrl+Shift+I` (Windows).
+   Safari: enable the Developer menu in Preferences -> Advanced, then press `Cmd+Option+I`.
+   Firefox: press `F12` or `Cmd+Option+I` (macOS) / `Ctrl+Shift+I` (Windows).
+3. Navigate to Cookies
+   Go to Application (Chrome/Edge) or Storage (Firefox), then open Cookies -> `https://claude.ai`.
+4. Copy the session key
+   Find the `sessionKey` cookie and copy its value (starts with `sk-ant-sid01-...`).
+
 ## Setup Flow
 
 1. Open app → redirected to Settings if no session key
