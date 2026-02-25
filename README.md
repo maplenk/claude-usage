@@ -176,3 +176,12 @@ All versions managed in `gradle/libs.versions.toml`:
 3. Tap Validate → fetches organizations → select org
 4. Dashboard shows usage metrics, widget starts updating
 5. Add widget to home screen from widget picker
+
+## Credits
+
+- Original project inspiration and API behavior reference:
+  [hamed-elfayome/Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker)
+
+## Contributors
+
+- [@claude](https://github.com/claude)
