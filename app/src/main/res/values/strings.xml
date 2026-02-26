@@ -45,9 +45,16 @@
 
     <!-- Notifications -->
     <string name="notification_channel_session_reset">Session Reset</string>
-    <string name="notification_channel_description">Notifies when your Claude session limit resets</string>
+    <string name="notification_channel_session_reset_description">Notifies when your Claude session limit resets</string>
+    <string name="notification_channel_usage_milestones">Usage Milestones</string>
+    <string name="notification_channel_usage_milestones_description">Notifies when your session usage crosses configured milestones</string>
     <string name="notification_session_reset_title">Session limit reset</string>
     <string name="notification_session_reset_body">Claude is ready to use again</string>
+    <string name="notification_usage_milestone_title">Session usage alert</string>
+    <string name="notification_usage_milestone_body">Limit used %1$d%%</string>
+
+    <!-- Settings Preferences -->
+    <string name="notify_usage_milestones">Notify on usage milestones</string>
 
     <!-- Widget -->
     <string name="widget_configure">Configure in app</string>

@@ -29,6 +29,22 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 ./gradlew installDebug
 ```
 
+## Notifications
+
+- **Session reset notification**: Optional alert when the 5-hour session usage resets to `0%`.
+- **Usage milestone notifications**: Optional alerts for Session (5h) usage milestones at `75%`, `80%`, `85%`, `90%`, and `100%`.
+- **Highest-only per refresh**: At most one milestone notification per refresh cycle, using current utilization text (for example, `Limit used 88%`).
+- **No backfill spam**: If usage jumps from `75%` to `88%`, the app sends one alert for the current usage value instead of multiple intermediate alerts.
+- **Upgrade-safe behavior**: If a user updates while already above a milestone and no milestone has been recorded in the current cycle, one current-value alert is sent once, then deduplicated.
+- **Independent toggle**: Milestone notifications are controlled separately from session-reset notifications in Settings (`Notify on usage milestones`).
+
+## Testing
+
+```bash
+# Run unit tests (requires JDK 17)
+./gradlew testDebugUnitTest
+```
+
 ## Project Structure
 
 ```
@@ -189,6 +205,18 @@ All versions managed in `gradle/libs.versions.toml`:
 3. Tap Validate → fetches organizations → select org
 4. Dashboard shows usage metrics, widget starts updating
 5. Add widget to home screen from widget picker
+
+## Release Notes
+
+### v0.2.0
+
+- Added Session (5h) usage milestone notifications at `75%`, `80%`, `85%`, `90%`, and `100%`.
+- Added new Settings preference: `Notify on usage milestones`.
+- Implemented highest-only milestone delivery per refresh cycle.
+- Notification body now reflects current utilization (for example, `Limit used 84%`).
+- Added dedupe persistence to avoid repeated milestone alerts for the same cycle.
+- Preserved existing session-reset notification behavior.
+- Added unit tests for threshold evaluation behavior.
 
 ## Credits
 

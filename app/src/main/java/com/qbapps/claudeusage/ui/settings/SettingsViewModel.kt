@@ -25,6 +25,7 @@ data class SettingsUiState(
     val selectedOrgId: String? = null,
     val refreshInterval: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
     val notifyOnReset: Boolean = true,
+    val notifyOnUsageThresholds: Boolean = true,
     val isValidating: Boolean = false,
     val validationError: String? = null,
     val isKeyValidated: Boolean = false,
@@ -132,6 +133,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun toggleNotifyOnUsageThresholds(enabled: Boolean) {
+        _uiState.update { it.copy(notifyOnUsageThresholds = enabled) }
+        viewModelScope.launch {
+            preferencesStore.saveNotifyOnUsageThresholds(enabled)
+        }
+    }
+
     fun clearData() {
         credentialStore.clear()
         workManagerScheduler.cancelAll()
@@ -141,6 +149,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             SettingsUiState(
                 refreshInterval = it.refreshInterval,
+                notifyOnReset = it.notifyOnReset,
+                notifyOnUsageThresholds = it.notifyOnUsageThresholds,
             )
         }
     }
@@ -162,8 +172,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val interval = preferencesStore.refreshIntervalSeconds.first()
             val notifyOnReset = preferencesStore.notifyOnSessionReset.first()
+            val notifyOnUsageThresholds = preferencesStore.notifyOnUsageThresholds.first()
             _uiState.update {
-                it.copy(refreshInterval = interval, notifyOnReset = notifyOnReset)
+                it.copy(
+                    refreshInterval = interval,
+                    notifyOnReset = notifyOnReset,
+                    notifyOnUsageThresholds = notifyOnUsageThresholds,
+                )
             }
         }
     }

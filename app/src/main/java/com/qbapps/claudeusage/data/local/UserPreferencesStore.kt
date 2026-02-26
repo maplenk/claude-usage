@@ -29,6 +29,8 @@ class UserPreferencesStore @Inject constructor(
     private val refreshIntervalKey = intPreferencesKey("refresh_interval_seconds")
     private val selectedOrgIdKey = stringPreferencesKey("selected_org_id")
     private val notifyOnResetKey = booleanPreferencesKey("notify_on_session_reset")
+    private val notifyOnUsageThresholdsKey = booleanPreferencesKey("notify_on_usage_thresholds")
+    private val lastNotifiedSessionThresholdKey = intPreferencesKey("last_notified_session_threshold")
 
     val refreshIntervalSeconds: Flow<Int> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[refreshIntervalKey] ?: DEFAULT_REFRESH_INTERVAL_SECONDS }
@@ -39,6 +41,12 @@ class UserPreferencesStore @Inject constructor(
     val notifyOnSessionReset: Flow<Boolean> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[notifyOnResetKey] ?: true }
 
+    val notifyOnUsageThresholds: Flow<Boolean> = context.userPreferencesDataStore.data
+        .map { prefs -> prefs[notifyOnUsageThresholdsKey] ?: true }
+
+    val lastNotifiedSessionThreshold: Flow<Int?> = context.userPreferencesDataStore.data
+        .map { prefs -> prefs[lastNotifiedSessionThresholdKey] }
+
     suspend fun saveRefreshInterval(seconds: Int) {
         context.userPreferencesDataStore.edit { prefs ->
             prefs[refreshIntervalKey] = seconds
@@ -48,6 +56,22 @@ class UserPreferencesStore @Inject constructor(
     suspend fun saveNotifyOnSessionReset(enabled: Boolean) {
         context.userPreferencesDataStore.edit { prefs ->
             prefs[notifyOnResetKey] = enabled
+        }
+    }
+
+    suspend fun saveNotifyOnUsageThresholds(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[notifyOnUsageThresholdsKey] = enabled
+        }
+    }
+
+    suspend fun saveLastNotifiedSessionThreshold(threshold: Int?) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (threshold != null) {
+                prefs[lastNotifiedSessionThresholdKey] = threshold
+            } else {
+                prefs.remove(lastNotifiedSessionThresholdKey)
+            }
         }
     }
 

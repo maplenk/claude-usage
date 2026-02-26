@@ -43,9 +43,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.qbapps.claudeusage.R
 import com.qbapps.claudeusage.ui.settings.components.RefreshIntervalSlider
 import com.qbapps.claudeusage.ui.settings.components.SessionKeyInput
 import com.qbapps.claudeusage.worker.SyncLog
@@ -160,6 +162,21 @@ fun SettingsScreen(
                     Switch(
                         checked = state.notifyOnReset,
                         onCheckedChange = viewModel::toggleNotifyOnReset,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.notify_usage_milestones),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Switch(
+                        checked = state.notifyOnUsageThresholds,
+                        onCheckedChange = viewModel::toggleNotifyOnUsageThresholds,
                     )
                 }
             }

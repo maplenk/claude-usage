@@ -95,4 +95,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Unit tests
+    testImplementation("junit:junit:4.13.2")
 }
