@@ -29,6 +29,13 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 ./gradlew installDebug
 ```
 
+## Download APK
+
+- Latest release direct download:
+  [app-debug.apk](https://github.com/maplenk/claude-usage/releases/latest/download/app-debug.apk)
+- Release page:
+  [Latest release](https://github.com/maplenk/claude-usage/releases/latest)
+
 ## Notifications
 
 - **Session reset notification**: Optional alert when the 5-hour session usage resets to `0%`.
@@ -225,4 +232,5 @@ All versions managed in `gradle/libs.versions.toml`:
 
 ## Contributors
 
-- [@claude](https://github.com/claude)
+- [@claude](https://github.com/claude) (Claude Code)
+- [@codex](https://github.com/codex)
