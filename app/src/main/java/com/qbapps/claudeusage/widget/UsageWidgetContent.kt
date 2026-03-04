@@ -46,11 +46,19 @@ private val RefreshBtnBg = ColorProvider(day = Color(0xFFE8ECF6), night = Color(
 
 @Composable
 fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
+    val baseModifier = GlanceModifier
+        .fillMaxSize()
+        .clickable(actionRunCallback<OpenAppActionCallback>())
+
+    // 1x1: transparent background so the ring looks like an app icon
+    val modifier = if (widgetSize == WidgetSize.SMALL) {
+        baseModifier
+    } else {
+        baseModifier.background(Surface)
+    }
+
     Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(Surface)
-            .clickable(actionRunCallback<OpenAppActionCallback>()),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         if (usage == null) {
@@ -95,12 +103,14 @@ private fun SmallLayout(usage: ClaudeUsage) {
     val metric = usage.fiveHour
     val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 54)
+    val bitmap = WidgetRingRenderer.render(
+        context, pct, metric?.status, ringDp = 57, circularBackground = true
+    )
 
     Image(
         provider = ImageProvider(bitmap),
         contentDescription = "Session ${pct.toInt()}%",
-        modifier = GlanceModifier.size(54.dp),
+        modifier = GlanceModifier.size(57.dp),
         contentScale = ContentScale.Fit
     )
 }

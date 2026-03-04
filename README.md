@@ -2,6 +2,15 @@
 
 Android app + home screen widget that displays your Claude AI usage metrics (session limits, daily limits, per-model breakdowns). Calls the same API as the [macOS Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker).
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/dashboard.jpg" width="220" alt="Dashboard" />
+  <img src="screenshots/settings.jpg" width="220" alt="Settings" />
+  <img src="screenshots/widget-1x1.jpg" width="220" alt="1x1 Widget" />
+  <img src="screenshots/widget-2x1.jpg" width="220" alt="2x1 Widget" />
+</p>
+
 ## Prerequisites
 
 | Tool | Version | Install |
@@ -214,6 +223,11 @@ All versions managed in `gradle/libs.versions.toml`:
 5. Add widget to home screen from widget picker
 
 ## Release Notes
+
+### v0.3.0
+
+- 1x1 widget now renders as a circular icon (transparent background) to match app icon size.
+- Added screenshots to README.
 
 ### v0.2.0
 

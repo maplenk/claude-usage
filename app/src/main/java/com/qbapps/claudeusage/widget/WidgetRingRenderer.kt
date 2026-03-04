@@ -16,7 +16,8 @@ object WidgetRingRenderer {
         context: Context,
         percentage: Double,
         status: UsageStatus?,
-        ringDp: Int = 110
+        ringDp: Int = 110,
+        circularBackground: Boolean = false
     ): Bitmap {
         val dark = isDarkMode(context)
         val density = context.resources.displayMetrics.density
@@ -24,6 +25,15 @@ object WidgetRingRenderer {
 
         val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
+
+        // Filled circle background so the ring is readable on any wallpaper
+        if (circularBackground) {
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = if (dark) 0xFF14161B.toInt() else 0xFFF4F6FB.toInt()
+            }
+            canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
+        }
 
         val strokeWidth = sizePx * 0.10f
         val gap = strokeWidth / 2 + sizePx * 0.04f
