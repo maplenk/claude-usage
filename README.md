@@ -1,18 +1,51 @@
-# Claude Session Guardrail - Android
+# Claude Session Guardrail — Android
 
-Local-first Android utility + home screen widget that helps you avoid hitting Claude's 5-hour cap by focusing on remaining time, pace, and risk.
+Local-first Android **home screen widget** for Claude’s **5-hour session reset**.
+It shows **remaining time**, **risk**, and a simple **pace/trend signal** so you don’t hit the cap unexpectedly.
+
+> Widget-first by design. The app exists to set up the widget, show history, and tune notifications.
+
+## Preview
+
+![Claude Session Guardrail](screenshots/readme-cover.png)
+
+## Why this exists
+
+Claude’s usage window is easy to lose track of while you’re deep in work.
+This utility keeps the most important signal on your home screen:
+
+- **How much of the 5h session you’ve used**
+- **When the reset happens**
+- **Whether your current pace is risky**
 
 ## Highlights
 
-- Hero-first session UI with ring progress and reset countdown.
-- Session guardrail insights: pace vs usual, cap-risk prediction, burn-window hints, and reset relief.
-- Local per-session history capture (simple raw samples, no remote analytics pipeline).
-- Home-screen widget with periodic background refresh.
-- Optional notifications for session reset + usage milestones.
+- **Widget-first session UI**: ring progress + reset countdown + risk state
+- **Local-only guardrail insights** (no remote analytics pipeline)
+  - pace vs your usual at the same point in session
+  - simple cap-risk prediction (“likely to exhaust before reset”)
+  - burn-window hints (when you typically spike)
+  - reset relief (high usage is less scary when reset is soon)
+- **Local per-session history capture** (simple raw samples)
+- **Home-screen widget** with periodic background refresh
+- **Optional notifications** for session reset + usage milestones + guardrail warnings
 
-## Screenshots
+## Widgets
 
-![Claude Session Guardrail](screenshots/readme-cover.png)
+Designed to scale from glanceable → informative:
+
+- **1×1**: % used (quick glance)
+- **2×2**: % used + time to reset + risk / pace hint (recommended)
+- **4×2**: adds small context (history/trend) without becoming a dashboard
+
+> The widget is the product. If you use only one thing, use the 2×2.
+
+## Download APK
+
+- Latest release direct download:
+  [app-debug.apk](https://github.com/maplenk/claude-usage/releases/latest/download/app-debug.apk)
+- Release page:
+  [Latest release](https://github.com/maplenk/claude-usage/releases/latest)
 
 ## Prerequisites
 
@@ -29,24 +62,6 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 ```
 
-## Build
-
-```bash
-# Debug APK
-./gradlew assembleDebug
-
-# Output at: app/build/outputs/apk/debug/app-debug.apk
-
-# Install directly to connected device
-./gradlew installDebug
-```
-
-## Download APK
-
-- Latest release direct download:
-  [app-debug.apk](https://github.com/maplenk/claude-usage/releases/latest/download/app-debug.apk)
-- Release page:
-  [Latest release](https://github.com/maplenk/claude-usage/releases/latest)
 
 ## Notifications
 
