@@ -12,12 +12,7 @@ Local-first Android utility + home screen widget that helps you avoid hitting Cl
 
 ## Screenshots
 
-<p align="center">
-  <img src="screenshots/dashboard.jpg" width="220" alt="Dashboard" />
-  <img src="screenshots/settings.jpg" width="220" alt="Settings" />
-  <img src="screenshots/widget-1x1.jpg" width="220" alt="1x1 Widget" />
-  <img src="screenshots/widget-2x1.jpg" width="220" alt="2x1 Widget" />
-</p>
+![Claude Session Guardrail](screenshots/readme-cover.png)
 
 ## Prerequisites
 
