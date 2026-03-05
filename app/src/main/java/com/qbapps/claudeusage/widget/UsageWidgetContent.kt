@@ -29,20 +29,22 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
+import com.qbapps.claudeusage.domain.model.UsageStatus
 import java.time.Duration
 import java.time.Instant
 
 enum class WidgetSize {
-    SMALL,  // 1x1: ring only
-    MEDIUM, // 2x1: ring + text side by side
-    LARGE   // 2x2: ring + countdown + refresh
+    SMALL,
+    MEDIUM,
+    LARGE,
 }
 
-private val Surface = ColorProvider(day = Color(0xFFF4F6FB), night = Color(0xFF14161B))
-private val PrimaryText = ColorProvider(day = Color(0xFF1B1B1F), night = Color(0xFFE4E1E6))
-private val SecondaryText = ColorProvider(day = Color(0xFF46464F), night = Color(0xFFC7C5D0))
-private val TertiaryText = ColorProvider(day = Color(0xFF6A6A74), night = Color(0xFFA8A6B1))
-private val RefreshBtnBg = ColorProvider(day = Color(0xFFE8ECF6), night = Color(0xFF2C303A))
+private val Surface = ColorProvider(day = Color(0xFFF6F7FB), night = Color(0xFF111217))
+private val SurfaceElevated = ColorProvider(day = Color(0xFFECEFF8), night = Color(0xFF1E222B))
+private val PrimaryText = ColorProvider(day = Color(0xFF1B1B1F), night = Color(0xFFF4EEE4))
+private val SecondaryText = ColorProvider(day = Color(0xFF454957), night = Color(0xFFD7D0C7))
+private val TertiaryText = ColorProvider(day = Color(0xFF6C6F7E), night = Color(0xFFAFA89E))
+private val RefreshBtnBg = ColorProvider(day = Color(0xFFE0E5F2), night = Color(0xFF2B313B))
 
 @Composable
 fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
@@ -50,7 +52,6 @@ fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
         .fillMaxSize()
         .clickable(actionRunCallback<OpenAppActionCallback>())
 
-    // 1x1: transparent background so the ring looks like an app icon
     val modifier = if (widgetSize == WidgetSize.SMALL) {
         baseModifier
     } else {
@@ -59,7 +60,7 @@ fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
 
     Box(
         modifier = modifier,
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         if (usage == null) {
             EmptyState(widgetSize)
@@ -73,29 +74,27 @@ fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun EmptyState(widgetSize: WidgetSize) {
     if (widgetSize == WidgetSize.SMALL) {
-        Text("C", style = TextStyle(color = SecondaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold))
+        Text(
+            "C",
+            style = TextStyle(color = SecondaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold),
+        )
     } else {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Claude", style = TextStyle(color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text(
+                "Claude",
+                style = TextStyle(color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+            )
             Spacer(GlanceModifier.height(2.dp))
             Text("Tap to set up", style = TextStyle(color = SecondaryText, fontSize = 10.sp))
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// 1x1: just the ring, nothing else
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun SmallLayout(usage: ClaudeUsage) {
@@ -104,20 +103,20 @@ private fun SmallLayout(usage: ClaudeUsage) {
     val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
 
     val bitmap = WidgetRingRenderer.render(
-        context, pct, metric?.status, ringDp = 57, circularBackground = true
+        context = context,
+        percentage = pct,
+        status = metric?.status,
+        ringDp = 59,
+        circularBackground = true,
     )
 
     Image(
         provider = ImageProvider(bitmap),
         contentDescription = "Session ${pct.toInt()}%",
-        modifier = GlanceModifier.size(57.dp),
-        contentScale = ContentScale.Fit
+        modifier = GlanceModifier.size(59.dp),
+        contentScale = ContentScale.Fit,
     )
 }
-
-// ---------------------------------------------------------------------------
-// 2x1: ring on left, text on right
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun MediumLayout(usage: ClaudeUsage) {
@@ -125,89 +124,168 @@ private fun MediumLayout(usage: ClaudeUsage) {
     val metric = usage.fiveHour
     val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 48)
+    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 52)
 
     Row(
-        modifier = GlanceModifier.fillMaxSize().padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             provider = ImageProvider(bitmap),
             contentDescription = "Session ${pct.toInt()}%",
-            modifier = GlanceModifier.size(48.dp),
-            contentScale = ContentScale.Fit
+            modifier = GlanceModifier.size(52.dp),
+            contentScale = ContentScale.Fit,
         )
-        Spacer(GlanceModifier.width(10.dp))
+        Spacer(GlanceModifier.width(8.dp))
         Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Session",
+                    style = TextStyle(color = PrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                )
+                Spacer(GlanceModifier.width(4.dp))
+                StatusDot(metric?.status)
+            }
+            Spacer(GlanceModifier.height(1.dp))
             Text(
-                "Session",
-                style = TextStyle(color = PrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                "${pct.toInt()}% used",
+                style = TextStyle(color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold),
             )
             metric?.resetsAt?.let {
-                Spacer(GlanceModifier.height(2.dp))
+                Spacer(GlanceModifier.height(1.dp))
                 Text(
-                    formatCountdown(it),
-                    style = TextStyle(color = TertiaryText, fontSize = 10.sp)
+                    text = formatCountdown(it),
+                    style = TextStyle(color = TertiaryText, fontSize = 10.sp),
                 )
             }
+            Spacer(GlanceModifier.height(1.dp))
+            Text(
+                text = "Weekly ${usage.sevenDay?.utilization.toWholePercent()}%",
+                style = TextStyle(color = SecondaryText, fontSize = 10.sp),
+            )
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// 2x2: ring centered, countdown + refresh at bottom
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun LargeLayout(usage: ClaudeUsage) {
     val context = LocalContext.current
     val metric = usage.fiveHour
     val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
+    val modelMetric = usage.currentModelMetric()
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 100)
+    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 80)
 
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(8.dp),
     ) {
-        Image(
-            provider = ImageProvider(bitmap),
-            contentDescription = "Session ${pct.toInt()}%",
-            modifier = GlanceModifier.size(100.dp),
-            contentScale = ContentScale.Fit
-        )
-
-        Spacer(GlanceModifier.height(8.dp))
-
-        // Bottom row: countdown left, refresh right
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = metric?.resetsAt?.let { formatCountdown(it) } ?: "",
-                style = TextStyle(color = TertiaryText, fontSize = 10.sp)
+            Image(
+                provider = ImageProvider(bitmap),
+                contentDescription = "Session ${pct.toInt()}%",
+                modifier = GlanceModifier.size(80.dp),
+                contentScale = ContentScale.Fit,
             )
-            Box(modifier = GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Spacer(GlanceModifier.width(10.dp))
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Session",
+                        style = TextStyle(color = PrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    )
+                    Spacer(GlanceModifier.width(4.dp))
+                    StatusDot(metric?.status, size = 7.dp)
+                }
+                Spacer(GlanceModifier.height(2.dp))
+                Text(
+                    "${pct.toInt()}% used",
+                    style = TextStyle(color = PrimaryText, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                )
+                Spacer(GlanceModifier.height(2.dp))
+                Text(
+                    metric?.resetsAt?.let { formatCountdown(it) } ?: "Ready",
+                    style = TextStyle(color = SecondaryText, fontSize = 10.sp),
+                )
+            }
+        }
+
+        Spacer(GlanceModifier.height(6.dp))
+
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MetricPill("Weekly", usage.sevenDay?.utilization)
+            Spacer(GlanceModifier.width(6.dp))
+            MetricPill(modelMetric.first, modelMetric.second)
+            Box(
+                modifier = GlanceModifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
                 Box(
                     modifier = GlanceModifier
                         .size(26.dp)
                         .cornerRadius(13.dp)
                         .background(RefreshBtnBg)
                         .clickable(actionRunCallback<RefreshActionCallback>()),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text("\u21BB", style = TextStyle(color = SecondaryText, fontSize = 13.sp))
                 }
             }
         }
+
+        Spacer(GlanceModifier.height(4.dp))
+        Text(
+            text = "Updated ${formatRelativeTime(usage.fetchedAt)}",
+            style = TextStyle(color = TertiaryText, fontSize = 10.sp),
+        )
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+@Composable
+private fun MetricPill(
+    label: String,
+    value: Double?,
+) {
+    Box(
+        modifier = GlanceModifier
+            .cornerRadius(10.dp)
+            .background(SurfaceElevated)
+            .padding(4.dp),
+    ) {
+        Text(
+            text = "$label ${value.toWholePercent()}%",
+            style = TextStyle(color = PrimaryText, fontSize = 10.sp, fontWeight = FontWeight.Medium),
+        )
+    }
+}
+
+@Composable
+private fun StatusDot(
+    status: UsageStatus?,
+    size: androidx.compose.ui.unit.Dp = 6.dp,
+) {
+    Box(
+        modifier = GlanceModifier
+            .size(size)
+            .cornerRadius(size / 2f)
+            .background(statusColor(status)),
+    ) {}
+}
+
+private fun statusColor(status: UsageStatus?) = when (status) {
+    UsageStatus.CRITICAL -> ColorProvider(day = Color(0xFFC62828), night = Color(0xFFEF9A9A))
+    UsageStatus.MODERATE -> ColorProvider(day = Color(0xFFF9A825), night = Color(0xFFFFD54F))
+    else -> ColorProvider(day = Color(0xFF2E7D32), night = Color(0xFF81C784))
+}
 
 private fun formatCountdown(resetsAt: Instant): String {
     val remaining = Duration.between(Instant.now(), resetsAt)
@@ -215,4 +293,30 @@ private fun formatCountdown(resetsAt: Instant): String {
     val hours = remaining.toHours()
     val minutes = remaining.toMinutes() % 60
     return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+}
+
+private fun Double?.toWholePercent(): Int = this?.coerceIn(0.0, 100.0)?.toInt() ?: 0
+
+private fun ClaudeUsage.currentModelMetric(): Pair<String, Double?> {
+    val sonnet = sevenDaySonnet?.utilization
+    val opus = sevenDayOpus?.utilization
+    if (sonnet == null && opus == null) return "Model" to null
+    return if ((sonnet ?: Double.MIN_VALUE) >= (opus ?: Double.MIN_VALUE)) {
+        "Sonnet" to sonnet
+    } else {
+        "Opus" to opus
+    }
+}
+
+private fun formatRelativeTime(timestamp: Instant): String {
+    val elapsed = Duration.between(timestamp, Instant.now())
+    if (elapsed.isNegative) return "now"
+    val minutes = elapsed.toMinutes()
+    val hours = elapsed.toHours()
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        else -> "${elapsed.toDays()}d ago"
+    }
 }

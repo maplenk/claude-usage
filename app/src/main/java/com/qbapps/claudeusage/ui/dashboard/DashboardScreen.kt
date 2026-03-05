@@ -1,8 +1,5 @@
 package com.qbapps.claudeusage.ui.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,9 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.qbapps.claudeusage.domain.model.UsageError
-import com.qbapps.claudeusage.ui.dashboard.components.UsageCard
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.qbapps.claudeusage.ui.dashboard.components.CompactUsageMetricCard
+import com.qbapps.claudeusage.ui.dashboard.components.DashboardMetaCard
+import com.qbapps.claudeusage.ui.dashboard.components.SessionHeroCard
+import com.qbapps.claudeusage.ui.dashboard.components.SessionGuardrailCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +78,7 @@ fun DashboardScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Claude Usage") },
+                title = { Text("Session Guardrail") },
                 scrollBehavior = scrollBehavior,
                 actions = {
                     if (state.isConfigured && !state.isLoading) {
@@ -122,50 +120,32 @@ fun DashboardScreen(
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         item {
-                            UsageCard(
-                                label = "Session (5h)",
+                            SessionHeroCard(metric = usage?.fiveHour)
+                        }
+                        item {
+                            SessionGuardrailCard(
                                 metric = usage?.fiveHour,
+                                history = state.history,
                             )
                         }
                         item {
-                            UsageCard(
-                                label = "Weekly (7d)",
+                            CompactUsageMetricCard(
+                                label = "Weekly context",
                                 metric = usage?.sevenDay,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                         item {
-                            UsageCard(
-                                label = "Opus (7d)",
-                                metric = usage?.sevenDayOpus,
+                            DashboardMetaCard(
+                                fetchedAt = usage?.fetchedAt,
+                                selectedOrgId = state.selectedOrgId,
+                                refreshIntervalSeconds = state.refreshIntervalSeconds,
+                                isRefreshing = state.isLoading,
                             )
-                        }
-                        item {
-                            UsageCard(
-                                label = "Sonnet (7d)",
-                                metric = usage?.sevenDaySonnet,
-                            )
-                        }
-
-                        // Last-updated footer
-                        if (usage != null) {
-                            item {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                val formatter = remember {
-                                    DateTimeFormatter.ofPattern("MMM d, h:mm:ss a")
-                                        .withZone(ZoneId.systemDefault())
-                                }
-                                Text(
-                                    text = "Last updated: ${formatter.format(usage.fetchedAt)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
                         }
                     }
                 }
@@ -185,7 +165,7 @@ private fun NotConfiguredContent(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Welcome to Claude Usage",
+            text = "Welcome to Session Guardrail",
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
         )

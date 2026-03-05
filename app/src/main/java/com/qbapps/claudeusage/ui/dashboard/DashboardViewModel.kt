@@ -7,6 +7,7 @@ import com.qbapps.claudeusage.data.local.UserPreferencesStore
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.data.repository.UsageApiException
 import com.qbapps.claudeusage.domain.model.UsageError
+import com.qbapps.claudeusage.domain.model.UsageHistoryPoint
 import com.qbapps.claudeusage.domain.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -21,9 +22,12 @@ import javax.inject.Inject
 
 data class DashboardUiState(
     val usage: ClaudeUsage? = null,
+    val history: List<UsageHistoryPoint> = emptyList(),
     val isLoading: Boolean = false,
     val error: UsageError? = null,
     val isConfigured: Boolean = false,
+    val selectedOrgId: String? = null,
+    val refreshIntervalSeconds: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
 )
 
 @HiltViewModel
@@ -41,6 +45,8 @@ class DashboardViewModel @Inject constructor(
     init {
         checkConfiguration()
         observeCachedUsage()
+        observeUsageHistory()
+        observeUserPreferences()
         startRefreshLoop()
     }
 
@@ -72,6 +78,27 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             repository.cachedUsage.collectLatest { cached ->
                 _uiState.update { it.copy(usage = cached) }
+            }
+        }
+    }
+
+    private fun observeUsageHistory() {
+        viewModelScope.launch {
+            repository.usageHistory.collectLatest { history ->
+                _uiState.update { it.copy(history = history) }
+            }
+        }
+    }
+
+    private fun observeUserPreferences() {
+        viewModelScope.launch {
+            preferencesStore.selectedOrgId.collectLatest { orgId ->
+                _uiState.update { it.copy(selectedOrgId = orgId) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesStore.refreshIntervalSeconds.collectLatest { refreshSeconds ->
+                _uiState.update { it.copy(refreshIntervalSeconds = refreshSeconds) }
             }
         }
     }
@@ -120,4 +147,3 @@ class DashboardViewModel @Inject constructor(
         )
     }
 }
-

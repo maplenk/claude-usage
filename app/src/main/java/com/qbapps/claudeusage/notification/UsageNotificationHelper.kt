@@ -20,8 +20,12 @@ class UsageNotificationHelper @Inject constructor(
     companion object {
         private const val CHANNEL_ID_SESSION_RESET = "session_reset"
         private const val CHANNEL_ID_USAGE_MILESTONE = "usage_milestone"
+        private const val CHANNEL_ID_GUARDRAIL = "session_guardrail"
         private const val NOTIFICATION_ID_SESSION_RESET = 1001
         private const val NOTIFICATION_ID_USAGE_MILESTONE_BASE = 2000
+        private const val NOTIFICATION_ID_CAP_RISK = 3001
+        private const val NOTIFICATION_ID_RESET_SOON = 3002
+        private const val NOTIFICATION_ID_BELOW_PACE = 3003
     }
 
     fun createChannel() {
@@ -41,9 +45,18 @@ class UsageNotificationHelper @Inject constructor(
             description = context.getString(R.string.notification_channel_usage_milestones_description)
         }
 
+        val guardrailChannel = NotificationChannel(
+            CHANNEL_ID_GUARDRAIL,
+            "Session guardrail alerts",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Cap risk, reset-soon, and pace alerts."
+        }
+
         context.getSystemService(NotificationManager::class.java).apply {
             createNotificationChannel(sessionResetChannel)
             createNotificationChannel(usageMilestoneChannel)
+            createNotificationChannel(guardrailChannel)
         }
     }
 
@@ -94,6 +107,57 @@ class UsageNotificationHelper @Inject constructor(
             .build()
 
         val notificationId = NOTIFICATION_ID_USAGE_MILESTONE_BASE + crossedThreshold
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
+    }
+
+    fun notifyCapRisk(predictedTimeToCapLabel: String, resetInLabel: String) {
+        notifyGuardrail(
+            notificationId = NOTIFICATION_ID_CAP_RISK,
+            title = "Session may hit cap before reset",
+            body = "Projected cap in $predictedTimeToCapLabel (reset in $resetInLabel).",
+        )
+    }
+
+    fun notifyResetSoon(resetInLabel: String) {
+        notifyGuardrail(
+            notificationId = NOTIFICATION_ID_RESET_SOON,
+            title = "Session reset expected soon",
+            body = "Reset expected in about $resetInLabel.",
+        )
+    }
+
+    fun notifyBelowUsualPace() {
+        notifyGuardrail(
+            notificationId = NOTIFICATION_ID_BELOW_PACE,
+            title = "Below your usual pace",
+            body = "You are tracking below your typical session usage pace today.",
+        )
+    }
+
+    private fun notifyGuardrail(
+        notificationId: Int,
+        title: String,
+        body: String,
+    ) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_GUARDRAIL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 }

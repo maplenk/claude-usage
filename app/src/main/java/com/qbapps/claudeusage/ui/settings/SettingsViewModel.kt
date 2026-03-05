@@ -145,6 +145,7 @@ class SettingsViewModel @Inject constructor(
         workManagerScheduler.cancelAll()
         viewModelScope.launch {
             preferencesStore.saveSelectedOrgId(null)
+            repository.clearCachedData()
         }
         _uiState.update {
             SettingsUiState(
@@ -152,6 +153,12 @@ class SettingsViewModel @Inject constructor(
                 notifyOnReset = it.notifyOnReset,
                 notifyOnUsageThresholds = it.notifyOnUsageThresholds,
             )
+        }
+    }
+
+    fun clearUsageHistory() {
+        viewModelScope.launch {
+            repository.clearUsageHistory()
         }
     }
 

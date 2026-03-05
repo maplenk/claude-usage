@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.delay
 import java.time.Instant
 
@@ -22,6 +24,8 @@ import java.time.Instant
 fun CountdownTimer(
     resetsAt: Instant,
     modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.bodySmall,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     var remainingSeconds by remember { mutableLongStateOf(computeRemaining(resetsAt)) }
 
@@ -41,8 +45,8 @@ fun CountdownTimer(
 
     Text(
         text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = textStyle,
+        color = color,
         modifier = modifier,
     )
 }

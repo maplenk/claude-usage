@@ -35,8 +35,9 @@ object WidgetRingRenderer {
             canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
         }
 
-        val strokeWidth = sizePx * 0.10f
-        val gap = strokeWidth / 2 + sizePx * 0.04f
+        val isCompactRing = ringDp <= 60
+        val strokeWidth = sizePx * if (isCompactRing) 0.135f else 0.11f
+        val gap = strokeWidth / 2 + sizePx * if (isCompactRing) 0.02f else 0.04f
         val rect = RectF(gap, gap, sizePx - gap, sizePx - gap)
 
         // Track ring
@@ -66,7 +67,7 @@ object WidgetRingRenderer {
         // Percentage text
         val pctPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
-            textSize = sizePx * 0.24f
+            textSize = sizePx * if (isCompactRing) 0.30f else 0.24f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             color = if (dark) 0xFFE4E1E6.toInt() else 0xFF1B1B1F.toInt()
         }
@@ -77,7 +78,7 @@ object WidgetRingRenderer {
         // "SESSION" label
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
-            textSize = sizePx * 0.075f
+            textSize = sizePx * if (isCompactRing) 0.09f else 0.075f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             letterSpacing = 0.1f
             color = if (dark) 0xFFA8A6B1.toInt() else 0xFF6A6A74.toInt()

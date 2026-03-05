@@ -93,6 +93,22 @@ class UsageDataStore @Inject constructor(
         }
     }
 
+    suspend fun clear() {
+        context.usageDataStore.edit { prefs ->
+            prefs.remove(hasData)
+            prefs.remove(fetchedAtEpochMillis)
+
+            prefs.remove(fiveHourUtilization)
+            prefs.remove(fiveHourResetsAt)
+            prefs.remove(sevenDayUtilization)
+            prefs.remove(sevenDayResetsAt)
+            prefs.remove(sevenDayOpusUtilization)
+            prefs.remove(sevenDayOpusResetsAt)
+            prefs.remove(sevenDaySonnetUtilization)
+            prefs.remove(sevenDaySonnetResetsAt)
+        }
+    }
+
     // ---- Private helpers ----
 
     private fun Preferences.readMetric(

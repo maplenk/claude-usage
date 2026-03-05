@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.qbapps.claudeusage.domain.model.UsageStatus
 import com.qbapps.claudeusage.ui.theme.statusCriticalColor
@@ -28,6 +29,7 @@ fun UsageProgressBar(
     progress: Float,
     status: UsageStatus,
     modifier: Modifier = Modifier,
+    height: Dp = 8.dp,
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
@@ -47,7 +49,7 @@ fun UsageProgressBar(
         progress = { animatedProgress },
         modifier = modifier
             .fillMaxWidth()
-            .height(8.dp)
+            .height(height)
             .clip(RoundedCornerShape(4.dp)),
         color = color,
         trackColor = trackColor,

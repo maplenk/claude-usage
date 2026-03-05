@@ -1,6 +1,14 @@
-# Claude Usage Tracker - Android
+# Claude Session Guardrail - Android
 
-Android app + home screen widget that displays your Claude AI usage metrics (session limits, daily limits, per-model breakdowns). Calls the same API as the [macOS Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker).
+Local-first Android utility + home screen widget that helps you avoid hitting Claude's 5-hour cap by focusing on remaining time, pace, and risk.
+
+## Highlights
+
+- Hero-first session UI with ring progress and reset countdown.
+- Session guardrail insights: pace vs usual, cap-risk prediction, burn-window hints, and reset relief.
+- Local per-session history capture (simple raw samples, no remote analytics pipeline).
+- Home-screen widget with periodic background refresh.
+- Optional notifications for session reset + usage milestones.
 
 ## Screenshots
 
@@ -49,6 +57,10 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 
 - **Session reset notification**: Optional alert when the 5-hour session usage resets to `0%`.
 - **Usage milestone notifications**: Optional alerts for Session (5h) usage milestones at `75%`, `80%`, `85%`, `90%`, and `100%`.
+- **Guardrail notifications**:
+  - Current pace may exhaust session before reset.
+  - Session reset expected in ~15 minutes.
+  - You're below your usual pace at the same point in session.
 - **Highest-only per refresh**: At most one milestone notification per refresh cycle, using current utilization text (for example, `Limit used 88%`).
 - **No backfill spam**: If usage jumps from `75%` to `88%`, the app sends one alert for the current usage value instead of multiple intermediate alerts.
 - **Upgrade-safe behavior**: If a user updates while already above a milestone and no milestone has been recorded in the current cycle, one current-value alert is sent once, then deduplicated.
@@ -86,7 +98,10 @@ cc-usage/
         │   │   │   ├── ClaudeUsage.kt     # Core data: fiveHour, sevenDay, opus, sonnet metrics
         │   │   │   ├── Organization.kt    # Org uuid + name
         │   │   │   ├── UsageError.kt      # Sealed class: Unauthorized, RateLimited, etc.
+        │   │   │   ├── UsageHistoryPoint.kt # Raw per-sample session snapshots
         │   │   │   └── UsageStatus.kt     # SAFE / MODERATE / CRITICAL enum (thresholds: 50%, 80%)
+        │   │   ├── guardrail/
+        │   │   │   └── SessionGuardrailEvaluator.kt # Pace + cap-risk + burn-window evaluation
         │   │   └── repository/
         │   │       └── UsageRepository.kt # Interface
         │   │
@@ -99,6 +114,7 @@ cc-usage/
         │   │   ├── local/
         │   │   │   ├── SecureCredentialStore.kt  # EncryptedSharedPreferences (session key, org ID)
         │   │   │   ├── UsageDataStore.kt         # Preferences DataStore — app cache
+        │   │   │   ├── UsageHistoryStore.kt      # CSV-backed usage history (30-day retention)
         │   │   │   └── UserPreferencesStore.kt   # Preferences DataStore — user settings (refresh interval, org)
         │   │   ├── repository/
         │   │   │   └── UsageRepositoryImpl.kt    # Fetches API → saves cache → pushes to widget
@@ -122,6 +138,7 @@ cc-usage/
         │   │   │   ├── DashboardViewModel.kt    # Auto-refresh loop, fetches usage
         │   │   │   └── components/
         │   │   │       ├── UsageCard.kt          # Card: label, progress bar, %, countdown
+        │   │   │       ├── SessionGuardrailCard.kt # Decision-support session guidance card
         │   │   │       ├── UsageProgressBar.kt   # Animated color-coded progress bar
         │   │   │       ├── CountdownTimer.kt     # Live countdown to reset time
         │   │   │       └── StatusIndicator.kt    # Colored dot
@@ -223,6 +240,27 @@ All versions managed in `gradle/libs.versions.toml`:
 5. Add widget to home screen from widget picker
 
 ## Release Notes
+
+### v0.5.0
+
+- Repositioned the app around a "Session Guardrail" experience.
+- Reworked dashboard hierarchy: hero Session ring, guardrail insights, lighter secondary context.
+- Added decision-support insights:
+  - Pace vs usual at the same point in the 5-hour session.
+  - Time-to-cap prediction and cap-before-reset risk detection.
+  - Typical burn-window detection (early/mid/late session behavior).
+  - Reset-relief hinting when budget is low but reset is near.
+- Added local guardrail notifications for cap-risk, reset-soon (15m), and below-usual pace.
+- Simplified settings surface into grouped cards with advanced tools hidden by default.
+- Refined widget layouts for 1x1, 2x1, and 2x2 to be purpose-built, not mini dashboards.
+
+### v0.4.0
+
+- Added persistent usage history tracking with 30-day retention.
+- Added dashboard trend chart with selectable ranges: `1h`, `6h`, `1d`, `7d`, `30d`.
+- Added quick trend summaries (latest, average, peak) for 5h and 7d windows.
+- Added Settings action to clear usage history.
+- Updated "Clear All Data" to also remove cached usage + history snapshots.
 
 ### v0.3.0
 

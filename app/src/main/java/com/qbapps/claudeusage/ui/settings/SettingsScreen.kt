@@ -5,8 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,12 +21,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +66,8 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showClearDialog by remember { mutableStateOf(false) }
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -82,145 +89,141 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // --- Session Key Section ---
             item {
-                Text(
-                    text = "Authentication",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                SettingsSectionCard(title = "Authentication") {
+                    if (state.maskedSessionKey != null) {
+                        Text(
+                            text = "Current key: ${state.maskedSessionKey}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                    SessionKeyInput(
+                        value = state.sessionKeyInput,
+                        onValueChange = viewModel::updateSessionKeyInput,
+                        onValidate = viewModel::validateAndSaveKey,
+                        isValidating = state.isValidating,
+                        errorMessage = state.validationError,
+                    )
+                }
+            }
+
+            if (state.isKeyValidated && state.organizations.isNotEmpty()) {
+                item {
+                    SettingsSectionCard(title = "Organization") {
+                        OrganizationDropdown(
+                            organizations = state.organizations,
+                            selectedOrgId = state.selectedOrgId,
+                            onSelect = viewModel::selectOrganization,
+                        )
+                    }
+                }
             }
 
             item {
-                if (state.maskedSessionKey != null) {
+                SettingsSectionCard(title = "Refresh & Notifications") {
+                    RefreshIntervalSlider(
+                        value = state.refreshInterval,
+                        onValueChange = viewModel::updateRefreshInterval,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Notify when session resets",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Switch(
+                            checked = state.notifyOnReset,
+                            onCheckedChange = viewModel::toggleNotifyOnReset,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.notify_usage_milestones),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Switch(
+                            checked = state.notifyOnUsageThresholds,
+                            onCheckedChange = viewModel::toggleNotifyOnUsageThresholds,
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSectionCard(title = "Widget Preferences") {
+                    BatteryOptimizationSection()
+                }
+            }
+
+            item {
+                SettingsSectionCard(title = "Advanced") {
                     Text(
-                        text = "Current key: ${state.maskedSessionKey}",
+                        text = "Debug and maintenance tools are hidden by default.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { showAdvanced = !showAdvanced },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (showAdvanced) "Hide Advanced Tools" else "Show Advanced Tools")
+                    }
+                    AnimatedVisibility(visible = showAdvanced) {
+                        Column(
+                            modifier = Modifier.padding(top = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                text = "Usage history powers pace baselines and cap predictions (retained for up to 30 days).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            OutlinedButton(
+                                onClick = { showClearHistoryDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Clear Usage History")
+                            }
+                            ExportLogSection(showDescription = false)
+                        }
+                    }
                 }
-
-                SessionKeyInput(
-                    value = state.sessionKeyInput,
-                    onValueChange = viewModel::updateSessionKeyInput,
-                    onValidate = viewModel::validateAndSaveKey,
-                    isValidating = state.isValidating,
-                    errorMessage = state.validationError,
-                )
             }
 
-            // --- Organization Picker ---
-            if (state.isKeyValidated && state.organizations.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
+            item {
+                SettingsSectionCard(title = "Danger Zone") {
                     Text(
-                        text = "Organization",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        text = "Clear all local data and reset app configuration.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OrganizationDropdown(
-                        organizations = state.organizations,
-                        selectedOrgId = state.selectedOrgId,
-                        onSelect = viewModel::selectOrganization,
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { showClearDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        ),
+                    ) {
+                        Text("Clear All Data")
+                    }
                 }
-            }
-
-            // --- Refresh Interval ---
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Preferences",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                RefreshIntervalSlider(
-                    value = state.refreshInterval,
-                    onValueChange = viewModel::updateRefreshInterval,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Notify when session resets",
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Switch(
-                        checked = state.notifyOnReset,
-                        onCheckedChange = viewModel::toggleNotifyOnReset,
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.notify_usage_milestones),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Switch(
-                        checked = state.notifyOnUsageThresholds,
-                        onCheckedChange = viewModel::toggleNotifyOnUsageThresholds,
-                    )
-                }
-            }
-
-            // --- Battery Optimization ---
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Background Refresh",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                BatteryOptimizationSection()
-            }
-
-            // --- Debug Log ---
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Debug",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ExportLogSection()
-            }
-
-            // --- Clear Data ---
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { showClearDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Clear All Data", color = MaterialTheme.colorScheme.error)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -231,7 +234,7 @@ fun SettingsScreen(
             onDismissRequest = { showClearDialog = false },
             title = { Text("Clear all data?") },
             text = {
-                Text("This will remove your session key, selected organization, and cached usage data. You will need to reconfigure the app.")
+                Text("This will remove your session key, selected organization, cached usage data, and usage history. You will need to reconfigure the app.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -245,6 +248,57 @@ fun SettingsScreen(
                 TextButton(onClick = { showClearDialog = false }) {
                     Text("Cancel")
                 }
+            },
+        )
+    }
+
+    if (showClearHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearHistoryDialog = false },
+            title = { Text("Clear usage history?") },
+            text = {
+                Text("This removes stored session baseline and prediction history. New history will start collecting on the next refresh.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.clearUsageHistory()
+                    showClearHistoryDialog = false
+                }) {
+                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistoryDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SettingsSectionCard(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                content()
             },
         )
     }
@@ -334,16 +388,20 @@ private fun BatteryOptimizationSection() {
 }
 
 @Composable
-private fun ExportLogSection() {
+private fun ExportLogSection(
+    showDescription: Boolean = true,
+) {
     val context = LocalContext.current
 
     Column {
-        Text(
-            text = "Export the background sync debug log for troubleshooting.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showDescription) {
+            Text(
+                text = "Export the background sync debug log for troubleshooting.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         OutlinedButton(
             onClick = {
                 val logText = SyncLog.getLog(context)

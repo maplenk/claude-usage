@@ -3,12 +3,16 @@ package com.qbapps.claudeusage.data.repository
 import android.content.Context
 import com.qbapps.claudeusage.data.local.SecureCredentialStore
 import com.qbapps.claudeusage.data.local.UsageDataStore
+import com.qbapps.claudeusage.data.local.UsageHistoryStore
 import com.qbapps.claudeusage.data.local.UserPreferencesStore
 import com.qbapps.claudeusage.data.mapper.toDomain
 import com.qbapps.claudeusage.data.remote.ClaudeApiService
+import com.qbapps.claudeusage.domain.guardrail.PaceTrack
+import com.qbapps.claudeusage.domain.guardrail.SessionGuardrailEvaluator
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.domain.model.Organization
 import com.qbapps.claudeusage.domain.model.UsageError
+import com.qbapps.claudeusage.domain.model.UsageHistoryPoint
 import com.qbapps.claudeusage.domain.repository.UsageRepository
 import com.qbapps.claudeusage.notification.UsageNotificationHelper
 import com.qbapps.claudeusage.notification.UsageThresholdEvaluator
@@ -29,6 +33,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val apiService: ClaudeApiService,
     private val credentialStore: SecureCredentialStore,
     private val usageDataStore: UsageDataStore,
+    private val usageHistoryStore: UsageHistoryStore,
     private val userPreferencesStore: UserPreferencesStore,
     private val notificationHelper: UsageNotificationHelper,
 ) : UsageRepository {
@@ -36,8 +41,13 @@ class UsageRepositoryImpl @Inject constructor(
     /** Minimum interval between fetches to avoid hammering the API. */
     private val minFetchIntervalMs = 5_000L
     @Volatile private var lastFetchTimeMs = 0L
+    @Volatile private var guardrailSessionEpochMs: Long? = null
+    @Volatile private var sentCapRiskForSession = false
+    @Volatile private var sentResetSoonForSession = false
+    @Volatile private var sentBelowPaceForSession = false
 
     override val cachedUsage: Flow<ClaudeUsage?> = usageDataStore.cachedUsage
+    override val usageHistory: Flow<List<UsageHistoryPoint>> = usageHistoryStore.history
 
     override suspend fun fetchUsage(): Result<ClaudeUsage> {
         val now = System.currentTimeMillis()
@@ -69,6 +79,20 @@ class UsageRepositoryImpl @Inject constructor(
                 )
             }
             usageDataStore.save(usage)
+            runCatching { usageHistoryStore.append(usage) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "history append skipped: ${error.message ?: "unknown"}"
+                    )
+                }
+            runCatching { maybeNotifyGuardrailSignals(usage) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "guardrail notifications skipped: ${error.message ?: "unknown"}"
+                    )
+                }
             pushDataToWidgets(context, usage)
             usage
         }
@@ -89,6 +113,15 @@ class UsageRepositoryImpl @Inject constructor(
     override suspend fun validateSessionKey(
         sessionKey: String
     ): Result<List<Organization>> = fetchOrganizations(sessionKey)
+
+    override suspend fun clearUsageHistory() {
+        usageHistoryStore.clear()
+    }
+
+    override suspend fun clearCachedData() {
+        usageDataStore.clear()
+        usageHistoryStore.clear()
+    }
 
     // ---- Private helpers ----
 
@@ -177,6 +210,55 @@ class UsageRepositoryImpl @Inject constructor(
         if (lastNotifiedThreshold == null || currentHighestReachedThreshold > lastNotifiedThreshold) {
             userPreferencesStore.saveLastNotifiedSessionThreshold(currentHighestReachedThreshold)
         }
+    }
+
+    private suspend fun maybeNotifyGuardrailSignals(usage: ClaudeUsage) {
+        val shouldNotify = userPreferencesStore.notifyOnUsageThresholds.first()
+        if (!shouldNotify) return
+
+        val insights = SessionGuardrailEvaluator.evaluate(
+            currentMetric = usage.fiveHour,
+            history = usageHistoryStore.history.value,
+        )
+
+        val sessionEpoch = usage.fiveHour?.resetsAt?.toEpochMilli()
+        if (sessionEpoch != guardrailSessionEpochMs) {
+            guardrailSessionEpochMs = sessionEpoch
+            sentCapRiskForSession = false
+            sentResetSoonForSession = false
+            sentBelowPaceForSession = false
+        }
+
+        if (insights.willHitCapBeforeReset && !sentCapRiskForSession) {
+            val capIn = insights.predictedTimeToCapMinutes?.let(::formatMinutes) ?: "soon"
+            val resetIn = insights.timeToResetMinutes?.let(::formatMinutes) ?: "unknown"
+            notificationHelper.notifyCapRisk(
+                predictedTimeToCapLabel = capIn,
+                resetInLabel = resetIn,
+            )
+            sentCapRiskForSession = true
+            SyncLog.d(context, "guardrail alert: cap-risk capIn=$capIn resetIn=$resetIn")
+        }
+
+        if ((insights.timeToResetMinutes ?: Long.MAX_VALUE) <= 15L && !sentResetSoonForSession) {
+            val resetIn = insights.timeToResetMinutes?.let(::formatMinutes) ?: "soon"
+            notificationHelper.notifyResetSoon(resetInLabel = resetIn)
+            sentResetSoonForSession = true
+            SyncLog.d(context, "guardrail alert: reset-soon resetIn=$resetIn")
+        }
+
+        if (insights.paceTrack == PaceTrack.BELOW_USUAL && !sentBelowPaceForSession) {
+            notificationHelper.notifyBelowUsualPace()
+            sentBelowPaceForSession = true
+            SyncLog.d(context, "guardrail alert: below-pace")
+        }
+    }
+
+    private fun formatMinutes(totalMinutes: Long): String {
+        val minutes = totalMinutes.coerceAtLeast(0L)
+        val hours = minutes / 60L
+        val remaining = minutes % 60L
+        return if (hours > 0L) "${hours}h ${remaining}m" else "${remaining}m"
     }
 }
 
