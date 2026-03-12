@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import com.qbapps.claudeusage.domain.model.UsageStatus
+import java.time.Instant
 import kotlin.math.roundToInt
 
 object WidgetRingRenderer {
@@ -30,7 +31,7 @@ object WidgetRingRenderer {
         if (circularBackground) {
             val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.FILL
-                color = if (dark) 0xFF14161B.toInt() else 0xFFF4F6FB.toInt()
+                color = if (dark) 0xFF2A2D35.toInt() else 0xFFD8DCE6.toInt()
             }
             canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
         }
@@ -84,6 +85,98 @@ object WidgetRingRenderer {
             color = if (dark) 0xFFA8A6B1.toInt() else 0xFF6A6A74.toInt()
         }
         canvas.drawText("SESSION", cx, pctY + pctPaint.textSize * 0.7f, labelPaint)
+
+        return bitmap
+    }
+
+    fun renderCountdown(
+        context: Context,
+        resetsAt: Instant?,
+        ringDp: Int = 52,
+        circularBackground: Boolean = false
+    ): Bitmap {
+        val dark = isDarkMode(context)
+        val density = context.resources.displayMetrics.density
+        val sizePx = (ringDp * density).toInt()
+
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        if (circularBackground) {
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = if (dark) 0xFF2A2D35.toInt() else 0xFFD8DCE6.toInt()
+            }
+            canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
+        }
+
+        val isCompactRing = ringDp <= 60
+        val strokeWidth = sizePx * if (isCompactRing) 0.135f else 0.11f
+        val gap = strokeWidth / 2 + sizePx * if (isCompactRing) 0.02f else 0.04f
+        val rect = RectF(gap, gap, sizePx - gap, sizePx - gap)
+
+        // Track ring
+        val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            this.strokeWidth = strokeWidth
+            color = if (dark) 0xFF343A47.toInt() else 0xFFE3E7F1.toInt()
+            strokeCap = Paint.Cap.ROUND
+        }
+        canvas.drawArc(rect, 0f, 360f, false, trackPaint)
+
+        // Progress arc based on remaining time (5h window)
+        val remaining = resetsAt?.let {
+            val dur = java.time.Duration.between(java.time.Instant.now(), it)
+            if (dur.isNegative) 0L else dur.toMinutes()
+        } ?: 0L
+        val maxMinutes = 5 * 60L
+        val fraction = (remaining.toFloat() / maxMinutes).coerceIn(0f, 1f)
+        val sweep = fraction * 360f
+
+        if (sweep > 0f) {
+            val accentColor = if (dark) 0xFF90CAF9.toInt() else 0xFF1565C0.toInt()
+            val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                this.strokeWidth = strokeWidth
+                color = accentColor
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawArc(rect, -90f, sweep, false, progressPaint)
+        }
+
+        val cx = sizePx / 2f
+        val cy = sizePx / 2f
+
+        // Countdown text
+        val countdownText = if (resetsAt == null) {
+            "--"
+        } else {
+            val dur = java.time.Duration.between(java.time.Instant.now(), resetsAt)
+            if (dur.isNegative || dur.isZero) "0m" else {
+                val h = dur.toHours()
+                val m = dur.toMinutes() % 60
+                if (h > 0) "${h}h${m}m" else "${m}m"
+            }
+        }
+
+        val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            textSize = sizePx * if (isCompactRing) 0.26f else 0.22f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = if (dark) 0xFFE4E1E6.toInt() else 0xFF1B1B1F.toInt()
+        }
+        val timeY = cy + timePaint.textSize * 0.12f
+        canvas.drawText(countdownText, cx, timeY, timePaint)
+
+        // "RESETS" label
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            textSize = sizePx * if (isCompactRing) 0.09f else 0.075f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            letterSpacing = 0.1f
+            color = if (dark) 0xFFA8A6B1.toInt() else 0xFF6A6A74.toInt()
+        }
+        canvas.drawText("RESETS", cx, timeY + timePaint.textSize * 0.7f, labelPaint)
 
         return bitmap
     }

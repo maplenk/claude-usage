@@ -4,6 +4,7 @@ import android.content.Context
 import com.qbapps.claudeusage.data.local.SecureCredentialStore
 import com.qbapps.claudeusage.data.local.UsageDataStore
 import com.qbapps.claudeusage.data.local.UsageHistoryStore
+import com.qbapps.claudeusage.data.local.GuardrailNotificationState
 import com.qbapps.claudeusage.data.local.UserPreferencesStore
 import com.qbapps.claudeusage.data.mapper.toDomain
 import com.qbapps.claudeusage.data.remote.ClaudeApiService
@@ -41,10 +42,6 @@ class UsageRepositoryImpl @Inject constructor(
     /** Minimum interval between fetches to avoid hammering the API. */
     private val minFetchIntervalMs = 5_000L
     @Volatile private var lastFetchTimeMs = 0L
-    @Volatile private var guardrailSessionEpochMs: Long? = null
-    @Volatile private var sentCapRiskForSession = false
-    @Volatile private var sentResetSoonForSession = false
-    @Volatile private var sentBelowPaceForSession = false
 
     override val cachedUsage: Flow<ClaudeUsage?> = usageDataStore.cachedUsage
     override val usageHistory: Flow<List<UsageHistoryPoint>> = usageHistoryStore.history
@@ -222,35 +219,57 @@ class UsageRepositoryImpl @Inject constructor(
         )
 
         val sessionEpoch = usage.fiveHour?.resetsAt?.toEpochMilli()
-        if (sessionEpoch != guardrailSessionEpochMs) {
-            guardrailSessionEpochMs = sessionEpoch
-            sentCapRiskForSession = false
-            sentResetSoonForSession = false
-            sentBelowPaceForSession = false
+        var state = userPreferencesStore.getGuardrailState()
+
+        // The 5-hour window is rolling, so resetsAt drifts slightly on every
+        // API response. Treat it as a new session only when the reset time
+        // jumps by more than 30 minutes (i.e. utilization truly reset).
+        val isNewSession = when {
+            sessionEpoch == null || state.sessionEpochMs == null -> true
+            else -> kotlin.math.abs(sessionEpoch - state.sessionEpochMs) > 30 * 60 * 1000L
         }
 
-        if (insights.willHitCapBeforeReset && !sentCapRiskForSession) {
+        if (isNewSession) {
+            state = GuardrailNotificationState(
+                sessionEpochMs = sessionEpoch,
+                sentCapRisk = false,
+                sentResetSoon = false,
+                sentBelowPace = false,
+            )
+            userPreferencesStore.saveGuardrailState(state)
+        }
+
+        var changed = false
+
+        if (insights.willHitCapBeforeReset && !state.sentCapRisk) {
             val capIn = insights.predictedTimeToCapMinutes?.let(::formatMinutes) ?: "soon"
             val resetIn = insights.timeToResetMinutes?.let(::formatMinutes) ?: "unknown"
             notificationHelper.notifyCapRisk(
                 predictedTimeToCapLabel = capIn,
                 resetInLabel = resetIn,
             )
-            sentCapRiskForSession = true
+            state = state.copy(sentCapRisk = true)
+            changed = true
             SyncLog.d(context, "guardrail alert: cap-risk capIn=$capIn resetIn=$resetIn")
         }
 
-        if ((insights.timeToResetMinutes ?: Long.MAX_VALUE) <= 15L && !sentResetSoonForSession) {
+        if ((insights.timeToResetMinutes ?: Long.MAX_VALUE) <= 15L && !state.sentResetSoon) {
             val resetIn = insights.timeToResetMinutes?.let(::formatMinutes) ?: "soon"
             notificationHelper.notifyResetSoon(resetInLabel = resetIn)
-            sentResetSoonForSession = true
+            state = state.copy(sentResetSoon = true)
+            changed = true
             SyncLog.d(context, "guardrail alert: reset-soon resetIn=$resetIn")
         }
 
-        if (insights.paceTrack == PaceTrack.BELOW_USUAL && !sentBelowPaceForSession) {
+        if (insights.paceTrack == PaceTrack.BELOW_USUAL && !state.sentBelowPace) {
             notificationHelper.notifyBelowUsualPace()
-            sentBelowPaceForSession = true
+            state = state.copy(sentBelowPace = true)
+            changed = true
             SyncLog.d(context, "guardrail alert: below-pace")
+        }
+
+        if (changed) {
+            userPreferencesStore.saveGuardrailState(state)
         }
     }
 

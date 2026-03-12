@@ -32,8 +32,25 @@ suspend fun pushDataToWidgets(context: Context, usage: ClaudeUsage) {
         }
     }
 
+    // Push to pill widgets too
+    val pillIds = manager.getGlanceIds(UsagePillWidget::class.java)
+    for (glanceId in pillIds) {
+        updateAppWidgetState(context, UsageWidgetStateDefinition, glanceId) { prefs ->
+            prefs.toMutablePreferences().apply {
+                this[UsageWidget.HAS_DATA] = "true"
+                this[UsageWidget.FETCHED_AT] = usage.fetchedAt.toEpochMilli()
+
+                writeMetric(this, usage.fiveHour, UsageWidget.FIVE_HOUR_UTIL, UsageWidget.FIVE_HOUR_RESET)
+                writeMetric(this, usage.sevenDay, UsageWidget.SEVEN_DAY_UTIL, UsageWidget.SEVEN_DAY_RESET)
+                writeMetric(this, usage.sevenDayOpus, UsageWidget.OPUS_UTIL, UsageWidget.OPUS_RESET)
+                writeMetric(this, usage.sevenDaySonnet, UsageWidget.SONNET_UTIL, UsageWidget.SONNET_RESET)
+            }
+        }
+    }
+
     // Trigger UI refresh for all widget instances
     UsageWidget().updateAll(context)
+    UsagePillWidget().updateAll(context)
 }
 
 private fun writeMetric(

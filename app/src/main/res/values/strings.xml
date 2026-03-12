@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Claude Usage</string>
     <string name="widget_description">Shows Claude AI usage metrics</string>
+    <string name="pill_widget_description">Claude usage progress bar</string>
 
     <!-- Dashboard -->
     <string name="dashboard_title">Claude Usage</string>

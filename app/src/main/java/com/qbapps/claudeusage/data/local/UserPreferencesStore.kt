@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,6 +33,10 @@ class UserPreferencesStore @Inject constructor(
     private val notifyOnResetKey = booleanPreferencesKey("notify_on_session_reset")
     private val notifyOnUsageThresholdsKey = booleanPreferencesKey("notify_on_usage_thresholds")
     private val lastNotifiedSessionThresholdKey = intPreferencesKey("last_notified_session_threshold")
+    private val guardrailSessionEpochKey = longPreferencesKey("guardrail_session_epoch_ms")
+    private val sentCapRiskKey = booleanPreferencesKey("sent_cap_risk")
+    private val sentResetSoonKey = booleanPreferencesKey("sent_reset_soon")
+    private val sentBelowPaceKey = booleanPreferencesKey("sent_below_pace")
 
     val refreshIntervalSeconds: Flow<Int> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[refreshIntervalKey] ?: DEFAULT_REFRESH_INTERVAL_SECONDS }
@@ -85,7 +91,38 @@ class UserPreferencesStore @Inject constructor(
         }
     }
 
+    /** Returns the session epoch and sent-flags for guardrail dedup. */
+    suspend fun getGuardrailState(): GuardrailNotificationState {
+        val prefs = context.userPreferencesDataStore.data.first()
+        return GuardrailNotificationState(
+            sessionEpochMs = prefs[guardrailSessionEpochKey],
+            sentCapRisk = prefs[sentCapRiskKey] ?: false,
+            sentResetSoon = prefs[sentResetSoonKey] ?: false,
+            sentBelowPace = prefs[sentBelowPaceKey] ?: false,
+        )
+    }
+
+    suspend fun saveGuardrailState(state: GuardrailNotificationState) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (state.sessionEpochMs != null) {
+                prefs[guardrailSessionEpochKey] = state.sessionEpochMs
+            } else {
+                prefs.remove(guardrailSessionEpochKey)
+            }
+            prefs[sentCapRiskKey] = state.sentCapRisk
+            prefs[sentResetSoonKey] = state.sentResetSoon
+            prefs[sentBelowPaceKey] = state.sentBelowPace
+        }
+    }
+
     companion object {
         const val DEFAULT_REFRESH_INTERVAL_SECONDS = 30
     }
 }
+
+data class GuardrailNotificationState(
+    val sessionEpochMs: Long?,
+    val sentCapRisk: Boolean,
+    val sentResetSoon: Boolean,
+    val sentBelowPace: Boolean,
+)

@@ -28,6 +28,7 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.qbapps.claudeusage.R
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.domain.model.UsageStatus
 import java.time.Duration
@@ -52,10 +53,12 @@ fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
         .fillMaxSize()
         .clickable(actionRunCallback<OpenAppActionCallback>())
 
-    val modifier = if (widgetSize == WidgetSize.SMALL) {
-        baseModifier
-    } else {
-        baseModifier.background(Surface)
+    val modifier = when (widgetSize) {
+        WidgetSize.SMALL -> baseModifier
+        WidgetSize.MEDIUM -> baseModifier.background(
+            ImageProvider(R.drawable.widget_background_semi)
+        )
+        WidgetSize.LARGE -> baseModifier.background(Surface)
     }
 
     Box(
@@ -124,48 +127,34 @@ private fun MediumLayout(usage: ClaudeUsage) {
     val metric = usage.fiveHour
     val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 52)
+    val ringSize = 56
+    val pctBitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = ringSize)
+    val resetBitmap = WidgetRingRenderer.renderCountdown(
+        context = context,
+        resetsAt = metric?.resetsAt,
+        ringDp = ringSize,
+    )
 
     Row(
         modifier = GlanceModifier
             .fillMaxSize()
-            .padding(8.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            provider = ImageProvider(bitmap),
+            provider = ImageProvider(pctBitmap),
             contentDescription = "Session ${pct.toInt()}%",
-            modifier = GlanceModifier.size(52.dp),
+            modifier = GlanceModifier.size(ringSize.dp),
             contentScale = ContentScale.Fit,
         )
-        Spacer(GlanceModifier.width(8.dp))
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Session",
-                    style = TextStyle(color = PrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                )
-                Spacer(GlanceModifier.width(4.dp))
-                StatusDot(metric?.status)
-            }
-            Spacer(GlanceModifier.height(1.dp))
-            Text(
-                "${pct.toInt()}% used",
-                style = TextStyle(color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-            )
-            metric?.resetsAt?.let {
-                Spacer(GlanceModifier.height(1.dp))
-                Text(
-                    text = formatCountdown(it),
-                    style = TextStyle(color = TertiaryText, fontSize = 10.sp),
-                )
-            }
-            Spacer(GlanceModifier.height(1.dp))
-            Text(
-                text = "Weekly ${usage.sevenDay?.utilization.toWholePercent()}%",
-                style = TextStyle(color = SecondaryText, fontSize = 10.sp),
-            )
-        }
+        Spacer(GlanceModifier.width(12.dp))
+        Image(
+            provider = ImageProvider(resetBitmap),
+            contentDescription = "Reset countdown",
+            modifier = GlanceModifier.size(ringSize.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
