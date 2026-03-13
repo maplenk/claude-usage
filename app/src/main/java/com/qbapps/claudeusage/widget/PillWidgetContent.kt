@@ -17,8 +17,8 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -44,8 +44,9 @@ fun PillWidgetContent(usage: ClaudeUsage?, widthDp: Int, heightDp: Int) {
             val metric = usage.fiveHour
             val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
 
-            val pillWidth = widthDp.coerceAtLeast(140)
-            val pillHeight = ((heightDp - 6) / 2).coerceAtLeast(30)
+            val pillGap = if (heightDp >= 62) 4 else 3
+            val pillWidth = (widthDp - 6).coerceIn(112, 126)
+            val pillHeight = ((heightDp - pillGap) / 2).coerceIn(24, 30)
 
             val usageBitmap = PillWidgetRenderer.renderUsage(
                 context = context,
@@ -70,14 +71,14 @@ fun PillWidgetContent(usage: ClaudeUsage?, widthDp: Int, heightDp: Int) {
                 Image(
                     provider = ImageProvider(usageBitmap),
                     contentDescription = "Session ${pct.toInt()}%",
-                    modifier = GlanceModifier.fillMaxWidth().height(pillHeight.dp),
+                    modifier = GlanceModifier.width(pillWidth.dp).height(pillHeight.dp),
                     contentScale = ContentScale.FillBounds,
                 )
-                Spacer(GlanceModifier.height(4.dp))
+                Spacer(GlanceModifier.height(pillGap.dp))
                 Image(
                     provider = ImageProvider(timerBitmap),
                     contentDescription = "Reset countdown",
-                    modifier = GlanceModifier.fillMaxWidth().height(pillHeight.dp),
+                    modifier = GlanceModifier.width(pillWidth.dp).height(pillHeight.dp),
                     contentScale = ContentScale.FillBounds,
                 )
             }

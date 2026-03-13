@@ -14,6 +14,8 @@ import kotlin.math.roundToInt
 
 object PillWidgetRenderer {
 
+    private const val MIN_TEXT_SIZE_RATIO = 0.30f
+
     enum class IconType { PIE_CHART, TIMER }
 
     fun renderUsage(
@@ -86,16 +88,17 @@ object PillWidgetRenderer {
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val radius = h / 2f
+        val pillRect = RectF(0f, 0f, w.toFloat(), h.toFloat())
 
         // Background pill
         val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = if (dark) 0xFF1C1F26.toInt() else 0xFFDDE1EC.toInt()
+            color = if (dark) 0xFF181B22.toInt() else 0xFFE2E6EF.toInt()
         }
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), radius, radius, bgPaint)
+        canvas.drawRoundRect(pillRect, radius, radius, bgPaint)
 
         // Progress fill
-        val fillWidth = (w * fillFraction).coerceAtLeast(0f)
+        val fillWidth = (w * fillFraction).coerceIn(0f, w.toFloat())
         if (fillWidth > 0f) {
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.FILL
@@ -103,20 +106,18 @@ object PillWidgetRenderer {
             }
             canvas.save()
             canvas.clipRect(0f, 0f, fillWidth, h.toFloat())
-            canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), radius, radius, fillPaint)
+            canvas.drawRoundRect(pillRect, radius, radius, fillPaint)
             canvas.restore()
         }
 
-        // Icon circle on the left
-        val circleMargin = h * 0.1f
-        val circleDiameter = h - circleMargin * 2
-        val circleCx = circleMargin + circleDiameter / 2f
+        // Larger icon plate to make the pill feel chunkier in a 2x1 slot.
+        val circleCx = h * 0.48f
         val circleCy = h / 2f
-        val circleRadius = circleDiameter / 2f
+        val circleRadius = h * 0.42f
 
         val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = if (dark) 0xFF2A2F3A.toInt() else 0xFFFFFFFF.toInt()
+            color = if (dark) 0xFF2B303B.toInt() else 0xFFF7F9FC.toInt()
         }
         canvas.drawCircle(circleCx, circleCy, circleRadius, circlePaint)
 
@@ -129,11 +130,17 @@ object PillWidgetRenderer {
         // Value text on the right
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
-            textSize = h * 0.38f
+            textSize = h * 0.42f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = if (dark) 0xFFE4E1E6.toInt() else 0xFF1B1B1F.toInt()
+            color = if (dark) 0xFFF4F6FA.toInt() else 0xFF1B1B1F.toInt()
         }
-        val textX = (circleCx + circleRadius + w) / 2f
+        val textStart = circleCx + circleRadius + h * 0.14f
+        val textEnd = w - h * 0.22f
+        val textWidth = (textEnd - textStart).coerceAtLeast(h.toFloat())
+        while (textPaint.measureText(valueText) > textWidth && textPaint.textSize > h * MIN_TEXT_SIZE_RATIO) {
+            textPaint.textSize *= 0.92f
+        }
+        val textX = textStart + textWidth / 2f
         val textMetrics = textPaint.fontMetrics
         val textY = h / 2f - (textMetrics.ascent + textMetrics.descent) / 2f
         canvas.drawText(valueText, textX, textY, textPaint)
@@ -150,14 +157,14 @@ object PillWidgetRenderer {
         dark: Boolean,
         percent: Float,
     ) {
-        val pieRadius = radius * 0.55f
+        val pieRadius = radius * 0.56f
         val pieRect = RectF(cx - pieRadius, cy - pieRadius, cx + pieRadius, cy + pieRadius)
 
         // Track circle (full ring)
         val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
-            strokeWidth = pieRadius * 0.45f
-            this.color = if (dark) 0xFF404859.toInt() else 0xFFCDD3E0.toInt()
+            strokeWidth = pieRadius * 0.38f
+            this.color = if (dark) 0xFF495163.toInt() else 0xFFCCD5E3.toInt()
         }
         canvas.drawArc(pieRect, 0f, 360f, false, trackPaint)
 
@@ -166,7 +173,7 @@ object PillWidgetRenderer {
         if (sweep > 0f) {
             val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
-                strokeWidth = pieRadius * 0.45f
+                strokeWidth = pieRadius * 0.38f
                 strokeCap = Paint.Cap.ROUND
                 this.color = color
             }
@@ -187,7 +194,7 @@ object PillWidgetRenderer {
         // Clock circle outline
         val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
-            strokeWidth = clockRadius * 0.2f
+            strokeWidth = clockRadius * 0.18f
             this.color = color
         }
         canvas.drawCircle(cx, cy, clockRadius, circlePaint)
@@ -195,7 +202,7 @@ object PillWidgetRenderer {
         // Clock hands
         val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
-            strokeWidth = clockRadius * 0.2f
+            strokeWidth = clockRadius * 0.18f
             strokeCap = Paint.Cap.ROUND
             this.color = color
         }
@@ -206,15 +213,15 @@ object PillWidgetRenderer {
     }
 
     private fun fillColorForStatus(status: UsageStatus?, dark: Boolean): Int = when (status) {
-        UsageStatus.CRITICAL -> if (dark) 0xFF8B2020.toInt() else 0xFFEF9A9A.toInt()
-        UsageStatus.MODERATE -> if (dark) 0xFF7A6A10.toInt() else 0xFFFFE082.toInt()
-        else -> if (dark) 0xFF1A6B5A.toInt() else 0xFF80CBC4.toInt()
+        UsageStatus.CRITICAL -> if (dark) 0xFF8E2630.toInt() else 0xFFF3B1BA.toInt()
+        UsageStatus.MODERATE -> if (dark) 0xFF8A6C1C.toInt() else 0xFFFFE08A.toInt()
+        else -> if (dark) 0xFF23846E.toInt() else 0xFF7DD5C7.toInt()
     }
 
     private fun accentColorForStatus(status: UsageStatus?, dark: Boolean): Int = when (status) {
-        UsageStatus.CRITICAL -> if (dark) 0xFFEF9A9A.toInt() else 0xFFC62828.toInt()
-        UsageStatus.MODERATE -> if (dark) 0xFFFFD54F.toInt() else 0xFFF9A825.toInt()
-        else -> if (dark) 0xFF81C784.toInt() else 0xFF2E7D32.toInt()
+        UsageStatus.CRITICAL -> if (dark) 0xFFFFB6C1.toInt() else 0xFFC62828.toInt()
+        UsageStatus.MODERATE -> if (dark) 0xFFFFDC73.toInt() else 0xFFE49D10.toInt()
+        else -> if (dark) 0xFF95E59B.toInt() else 0xFF1F8A70.toInt()
     }
 
     private fun isDarkMode(context: Context): Boolean =
