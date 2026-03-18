@@ -36,11 +36,12 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
 
-        // Certificate pinning for claude.ai
+        // Certificate pinning for claude.ai — pinned to Let's Encrypt root CAs
+        // (leaf/intermediate certs rotate every ~3 months; roots are stable for years)
         builder.certificatePinner(
             CertificatePinner.Builder()
-                .add("claude.ai", "sha256/leWIRt5k+j34MAUDnCEED3hpf0m2VL02ICoidBGHSAQ=") // leaf
-                .add("claude.ai", "sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=") // intermediate
+                .add("claude.ai", "sha256/C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=") // ISRG Root X1 (expires 2035)
+                .add("claude.ai", "sha256/diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=") // ISRG Root X2 (expires 2040)
                 .build()
         )
 
