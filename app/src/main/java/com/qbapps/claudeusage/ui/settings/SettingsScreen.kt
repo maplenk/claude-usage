@@ -160,6 +160,54 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::toggleNotifyOnUsageThresholds,
                         )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Persistent status bar",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = "Show ongoing notification with session usage",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = state.showPersistentNotification,
+                            onCheckedChange = viewModel::togglePersistentNotification,
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSectionCard(title = "Display") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Relative countdown",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = if (state.useRelativeTime) "\"Resets in 2h 34m\"" else "\"Resets Mon, 2:30 PM\"",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = state.useRelativeTime,
+                            onCheckedChange = viewModel::toggleUseRelativeTime,
+                        )
+                    }
                 }
             }
 

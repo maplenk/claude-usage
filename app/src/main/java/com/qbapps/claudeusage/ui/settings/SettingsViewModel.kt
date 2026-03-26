@@ -8,6 +8,7 @@ import com.qbapps.claudeusage.domain.model.Organization
 import com.qbapps.claudeusage.domain.model.UsageError
 import com.qbapps.claudeusage.domain.repository.UsageRepository
 import com.qbapps.claudeusage.data.repository.UsageApiException
+import com.qbapps.claudeusage.notification.UsageNotificationHelper
 import com.qbapps.claudeusage.worker.WorkManagerScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,8 @@ data class SettingsUiState(
     val refreshInterval: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
     val notifyOnReset: Boolean = true,
     val notifyOnUsageThresholds: Boolean = true,
+    val showPersistentNotification: Boolean = false,
+    val useRelativeTime: Boolean = true,
     val isValidating: Boolean = false,
     val validationError: String? = null,
     val isKeyValidated: Boolean = false,
@@ -37,6 +40,7 @@ class SettingsViewModel @Inject constructor(
     private val preferencesStore: UserPreferencesStore,
     private val repository: UsageRepository,
     private val workManagerScheduler: WorkManagerScheduler,
+    private val notificationHelper: UsageNotificationHelper,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -140,9 +144,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun togglePersistentNotification(enabled: Boolean) {
+        _uiState.update { it.copy(showPersistentNotification = enabled) }
+        viewModelScope.launch {
+            preferencesStore.saveShowPersistentNotification(enabled)
+            if (!enabled) {
+                notificationHelper.cancelPersistentNotification()
+            }
+        }
+    }
+
+    fun toggleUseRelativeTime(enabled: Boolean) {
+        _uiState.update { it.copy(useRelativeTime = enabled) }
+        viewModelScope.launch {
+            preferencesStore.saveUseRelativeTime(enabled)
+        }
+    }
+
     fun clearData() {
         credentialStore.clear()
         workManagerScheduler.cancelAll()
+        notificationHelper.cancelPersistentNotification()
         viewModelScope.launch {
             preferencesStore.saveSelectedOrgId(null)
             repository.clearCachedData()
@@ -180,11 +202,15 @@ class SettingsViewModel @Inject constructor(
             val interval = preferencesStore.refreshIntervalSeconds.first()
             val notifyOnReset = preferencesStore.notifyOnSessionReset.first()
             val notifyOnUsageThresholds = preferencesStore.notifyOnUsageThresholds.first()
+            val showPersistent = preferencesStore.showPersistentNotification.first()
+            val useRelativeTime = preferencesStore.useRelativeTime.first()
             _uiState.update {
                 it.copy(
                     refreshInterval = interval,
                     notifyOnReset = notifyOnReset,
                     notifyOnUsageThresholds = notifyOnUsageThresholds,
+                    showPersistentNotification = showPersistent,
+                    useRelativeTime = useRelativeTime,
                 )
             }
         }

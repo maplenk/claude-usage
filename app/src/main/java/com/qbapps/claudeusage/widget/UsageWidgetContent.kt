@@ -103,12 +103,12 @@ private fun EmptyState(widgetSize: WidgetSize) {
 private fun SmallLayout(usage: ClaudeUsage) {
     val context = LocalContext.current
     val metric = usage.fiveHour
-    val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
+    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
 
     val bitmap = WidgetRingRenderer.render(
         context = context,
         percentage = pct,
-        status = metric?.status,
+        status = metric?.effectiveStatus(),
         ringDp = 59,
         circularBackground = true,
     )
@@ -125,10 +125,10 @@ private fun SmallLayout(usage: ClaudeUsage) {
 private fun MediumLayout(usage: ClaudeUsage) {
     val context = LocalContext.current
     val metric = usage.fiveHour
-    val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
+    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
 
     val ringSize = 56
-    val pctBitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = ringSize)
+    val pctBitmap = WidgetRingRenderer.render(context, pct, metric?.effectiveStatus(), ringDp = ringSize)
     val resetBitmap = WidgetRingRenderer.renderCountdown(
         context = context,
         resetsAt = metric?.resetsAt,
@@ -162,10 +162,10 @@ private fun MediumLayout(usage: ClaudeUsage) {
 private fun LargeLayout(usage: ClaudeUsage) {
     val context = LocalContext.current
     val metric = usage.fiveHour
-    val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
+    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
     val modelMetric = usage.currentModelMetric()
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.status, ringDp = 80)
+    val bitmap = WidgetRingRenderer.render(context, pct, metric?.effectiveStatus(), ringDp = 80)
 
     Column(
         modifier = GlanceModifier

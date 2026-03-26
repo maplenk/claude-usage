@@ -42,7 +42,7 @@ fun PillWidgetContent(usage: ClaudeUsage?, widthDp: Int, heightDp: Int) {
         } else {
             val context = LocalContext.current
             val metric = usage.fiveHour
-            val pct = metric?.utilization?.coerceIn(0.0, 100.0) ?: 0.0
+            val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
 
             val pillGap = if (heightDp >= 62) 4 else 3
             val pillWidth = (widthDp - 6).coerceIn(112, 126)
@@ -51,7 +51,7 @@ fun PillWidgetContent(usage: ClaudeUsage?, widthDp: Int, heightDp: Int) {
             val usageBitmap = PillWidgetRenderer.renderUsage(
                 context = context,
                 percentage = pct,
-                status = metric?.status,
+                status = metric?.effectiveStatus(),
                 widthDp = pillWidth,
                 heightDp = pillHeight,
             )

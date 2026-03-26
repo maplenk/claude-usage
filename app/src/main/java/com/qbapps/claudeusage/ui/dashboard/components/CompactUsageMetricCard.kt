@@ -36,6 +36,7 @@ fun CompactUsageMetricCard(
     label: String,
     metric: UsageMetric?,
     modifier: Modifier = Modifier,
+    useRelativeTime: Boolean = true,
 ) {
     Card(
         modifier = modifier,
@@ -89,7 +90,7 @@ fun CompactUsageMetricCard(
                     height = 5.dp,
                 )
                 Text(
-                    text = metric.resetsAt.toResetLabel(),
+                    text = metric.resetsAt.toResetLabel(useRelativeTime),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                 )
@@ -105,11 +106,22 @@ private fun statusColor(status: UsageStatus) = when (status) {
     UsageStatus.CRITICAL -> statusCriticalColor
 }
 
-private fun Instant?.toResetLabel(): String {
+private fun Instant?.toResetLabel(useRelativeTime: Boolean): String {
     if (this == null) return "No reset time"
-    val formatter = DateTimeFormatter.ofPattern("EEE, h:mm a", Locale.US)
-        .withZone(ZoneId.systemDefault())
-    return "Resets ${formatter.format(this)}"
+    return if (useRelativeTime) {
+        val remaining = java.time.Duration.between(Instant.now(), this)
+        if (remaining.isNegative || remaining.isZero) {
+            "Expired"
+        } else {
+            val h = remaining.toHours()
+            val m = remaining.toMinutes() % 60
+            if (h > 0) "Resets in ${h}h ${m}m" else "Resets in ${m}m"
+        }
+    } else {
+        val formatter = DateTimeFormatter.ofPattern("EEE, h:mm a", Locale.US)
+            .withZone(ZoneId.systemDefault())
+        "Resets ${formatter.format(this)}"
+    }
 }
 
 private fun Double.toCompactPercent(): String = String.format(Locale.US, "%.1f", this)

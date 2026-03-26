@@ -124,7 +124,10 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         item {
-                            SessionHeroCard(metric = usage?.fiveHour)
+                            SessionHeroCard(
+                                metric = usage?.fiveHour,
+                                useRelativeTime = state.useRelativeTime,
+                            )
                         }
                         item {
                             SessionGuardrailCard(
@@ -137,6 +140,7 @@ fun DashboardScreen(
                                 label = "Weekly context",
                                 metric = usage?.sevenDay,
                                 modifier = Modifier.fillMaxWidth(),
+                                useRelativeTime = state.useRelativeTime,
                             )
                         }
                         item {

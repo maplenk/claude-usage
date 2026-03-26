@@ -39,11 +39,16 @@ import com.qbapps.claudeusage.ui.theme.statusModerateColor
 import com.qbapps.claudeusage.ui.theme.statusModerateContainerColor
 import com.qbapps.claudeusage.ui.theme.statusSafeColor
 import com.qbapps.claudeusage.ui.theme.statusSafeContainerColor
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun SessionHeroCard(
     metric: UsageMetric?,
     modifier: Modifier = Modifier,
+    useRelativeTime: Boolean = true,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -76,6 +81,8 @@ fun SessionHeroCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            val effectiveStatus = metric.effectiveStatus()
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -87,25 +94,39 @@ fun SessionHeroCard(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                StatusBadge(status = metric.status)
+                StatusBadge(status = effectiveStatus)
             }
 
             SessionUsageRing(metric = metric)
 
             metric.resetsAt?.let { resetsAt ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                if (metric.isExpired()) {
                     Text(
-                        text = "Resets in",
+                        text = "Session reset — awaiting fresh data",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    CountdownTimer(
-                        resetsAt = resetsAt,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                } else if (useRelativeTime) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Resets in",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        CountdownTimer(
+                            resetsAt = resetsAt,
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = formatAbsoluteReset(resetsAt),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -117,14 +138,17 @@ fun SessionHeroCard(
 private fun SessionUsageRing(
     metric: UsageMetric,
 ) {
-    val progress = (metric.utilization / 100.0).toFloat().coerceIn(0f, 1f)
+    val effectiveUtil = metric.effectiveUtilization()
+    val effectiveStatus = metric.effectiveStatus()
+
+    val progress = (effectiveUtil / 100.0).toFloat().coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(durationMillis = 650),
         label = "session_hero_ring_progress",
     )
 
-    val progressColor = when (metric.status) {
+    val progressColor = when (effectiveStatus) {
         UsageStatus.SAFE -> statusSafeColor
         UsageStatus.MODERATE -> statusModerateColor
         UsageStatus.CRITICAL -> statusCriticalColor
@@ -166,7 +190,7 @@ private fun SessionUsageRing(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "${String.format("%.1f", metric.utilization)}%",
+                text = "${String.format("%.1f", effectiveUtil)}%",
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 38.sp,
@@ -175,7 +199,7 @@ private fun SessionUsageRing(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = statusHeadline(metric.status),
+                text = statusHeadline(effectiveStatus),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -215,4 +239,10 @@ private fun statusHeadline(status: UsageStatus): String = when (status) {
     UsageStatus.SAFE -> "Comfortable"
     UsageStatus.MODERATE -> "Approaching limit"
     UsageStatus.CRITICAL -> "Risk zone"
+}
+
+private fun formatAbsoluteReset(resetsAt: Instant): String {
+    val formatter = DateTimeFormatter.ofPattern("EEE, h:mm a", Locale.US)
+        .withZone(ZoneId.systemDefault())
+    return "Resets ${formatter.format(resetsAt)}"
 }

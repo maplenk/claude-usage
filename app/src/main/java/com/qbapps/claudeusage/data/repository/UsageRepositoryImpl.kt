@@ -91,6 +91,13 @@ class UsageRepositoryImpl @Inject constructor(
                     )
                 }
             pushDataToWidgets(context, usage)
+            runCatching { maybeUpdatePersistentNotification(usage) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "persistent notification skipped: ${error.message ?: "unknown"}"
+                    )
+                }
             usage
         }
     }
@@ -270,6 +277,15 @@ class UsageRepositoryImpl @Inject constructor(
 
         if (changed) {
             userPreferencesStore.saveGuardrailState(state)
+        }
+    }
+
+    private suspend fun maybeUpdatePersistentNotification(usage: ClaudeUsage) {
+        val enabled = userPreferencesStore.showPersistentNotification.first()
+        if (enabled) {
+            notificationHelper.updatePersistentNotification(usage)
+        } else {
+            notificationHelper.cancelPersistentNotification()
         }
     }
 

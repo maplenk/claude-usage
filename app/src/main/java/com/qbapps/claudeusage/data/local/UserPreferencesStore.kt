@@ -37,6 +37,8 @@ class UserPreferencesStore @Inject constructor(
     private val sentCapRiskKey = booleanPreferencesKey("sent_cap_risk")
     private val sentResetSoonKey = booleanPreferencesKey("sent_reset_soon")
     private val sentBelowPaceKey = booleanPreferencesKey("sent_below_pace")
+    private val useRelativeTimeKey = booleanPreferencesKey("use_relative_time")
+    private val persistentNotificationKey = booleanPreferencesKey("show_persistent_notification")
 
     val refreshIntervalSeconds: Flow<Int> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[refreshIntervalKey] ?: DEFAULT_REFRESH_INTERVAL_SECONDS }
@@ -52,6 +54,26 @@ class UserPreferencesStore @Inject constructor(
 
     val lastNotifiedSessionThreshold: Flow<Int?> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[lastNotifiedSessionThresholdKey] }
+
+    /** When true, reset times are shown as relative countdowns ("2h 34m"); otherwise absolute ("Mon, 2:30 PM"). */
+    val useRelativeTime: Flow<Boolean> = context.userPreferencesDataStore.data
+        .map { prefs -> prefs[useRelativeTimeKey] ?: true }
+
+    /** When true, an ongoing notification with session usage is shown in the shade. */
+    val showPersistentNotification: Flow<Boolean> = context.userPreferencesDataStore.data
+        .map { prefs -> prefs[persistentNotificationKey] ?: false }
+
+    suspend fun saveShowPersistentNotification(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[persistentNotificationKey] = enabled
+        }
+    }
+
+    suspend fun saveUseRelativeTime(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[useRelativeTimeKey] = enabled
+        }
+    }
 
     suspend fun saveRefreshInterval(seconds: Int) {
         context.userPreferencesDataStore.edit { prefs ->

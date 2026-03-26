@@ -28,6 +28,7 @@ data class DashboardUiState(
     val isConfigured: Boolean = false,
     val selectedOrgId: String? = null,
     val refreshIntervalSeconds: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
+    val useRelativeTime: Boolean = true,
 )
 
 @HiltViewModel
@@ -99,6 +100,11 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesStore.refreshIntervalSeconds.collectLatest { refreshSeconds ->
                 _uiState.update { it.copy(refreshIntervalSeconds = refreshSeconds) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesStore.useRelativeTime.collectLatest { useRelative ->
+                _uiState.update { it.copy(useRelativeTime = useRelative) }
             }
         }
     }
