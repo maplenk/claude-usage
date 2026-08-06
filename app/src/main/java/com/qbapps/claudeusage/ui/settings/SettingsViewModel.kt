@@ -7,6 +7,10 @@ import com.qbapps.claudeusage.data.local.UserPreferencesStore
 import com.qbapps.claudeusage.domain.model.Organization
 import com.qbapps.claudeusage.domain.model.UsageError
 import com.qbapps.claudeusage.domain.repository.UsageRepository
+import com.qbapps.claudeusage.domain.repository.CodexUsageRepository
+import com.qbapps.claudeusage.domain.model.CodexDeviceCode
+import com.qbapps.claudeusage.domain.model.GrokDeviceCode
+import com.qbapps.claudeusage.domain.repository.GrokUsageRepository
 import com.qbapps.claudeusage.data.repository.UsageApiException
 import com.qbapps.claudeusage.notification.UsageNotificationHelper
 import com.qbapps.claudeusage.worker.WorkManagerScheduler
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,6 +37,14 @@ data class SettingsUiState(
     val isValidating: Boolean = false,
     val validationError: String? = null,
     val isKeyValidated: Boolean = false,
+    val isCodexConnected: Boolean = false,
+    val isCodexConnecting: Boolean = false,
+    val codexDeviceCode: CodexDeviceCode? = null,
+    val codexSignInError: String? = null,
+    val isGrokConnected: Boolean = false,
+    val isGrokConnecting: Boolean = false,
+    val grokDeviceCode: GrokDeviceCode? = null,
+    val grokSignInError: String? = null,
 )
 
 @HiltViewModel
@@ -39,12 +52,16 @@ class SettingsViewModel @Inject constructor(
     private val credentialStore: SecureCredentialStore,
     private val preferencesStore: UserPreferencesStore,
     private val repository: UsageRepository,
+    private val codexRepository: CodexUsageRepository,
+    private val grokRepository: GrokUsageRepository,
     private val workManagerScheduler: WorkManagerScheduler,
     private val notificationHelper: UsageNotificationHelper,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private var codexLoginJob: Job? = null
+    private var grokLoginJob: Job? = null
 
     init {
         loadExistingSettings()
@@ -52,6 +69,156 @@ class SettingsViewModel @Inject constructor(
 
     fun updateSessionKeyInput(key: String) {
         _uiState.update { it.copy(sessionKeyInput = key, validationError = null) }
+    }
+
+    fun connectCodex() {
+        codexLoginJob?.cancel()
+        codexLoginJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isCodexConnecting = true,
+                    codexDeviceCode = null,
+                    codexSignInError = null,
+                )
+            }
+            val deviceCode = codexRepository.startDeviceLogin().getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isCodexConnecting = false,
+                        codexSignInError = error.message ?: "Codex sign-in could not start.",
+                    )
+                }
+                return@launch
+            }
+            _uiState.update { it.copy(codexDeviceCode = deviceCode) }
+
+            codexRepository.completeDeviceLogin(deviceCode).fold(
+                onSuccess = {
+                    val interval = preferencesStore.refreshIntervalSeconds.first()
+                    workManagerScheduler.scheduleSync(interval)
+                    workManagerScheduler.schedulePeriodicFallback()
+                    _uiState.update {
+                        it.copy(
+                            isCodexConnected = true,
+                            isCodexConnecting = false,
+                            codexDeviceCode = null,
+                            codexSignInError = null,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isCodexConnecting = false,
+                            codexDeviceCode = null,
+                            codexSignInError = error.message ?: "Codex sign-in failed.",
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun cancelCodexConnection() {
+        codexLoginJob?.cancel()
+        codexLoginJob = null
+        _uiState.update {
+            it.copy(
+                isCodexConnecting = false,
+                codexDeviceCode = null,
+                codexSignInError = null,
+            )
+        }
+    }
+
+    fun disconnectCodex() {
+        codexLoginJob?.cancel()
+        viewModelScope.launch {
+            codexRepository.disconnect()
+            _uiState.update {
+                it.copy(
+                    isCodexConnected = false,
+                    isCodexConnecting = false,
+                    codexDeviceCode = null,
+                    codexSignInError = null,
+                )
+            }
+        }
+    }
+
+    fun connectGrok() {
+        grokLoginJob?.cancel()
+        grokLoginJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isGrokConnecting = true,
+                    grokDeviceCode = null,
+                    grokSignInError = null,
+                )
+            }
+            val deviceCode = grokRepository.startDeviceLogin().getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isGrokConnecting = false,
+                        grokSignInError = error.message ?: "Grok sign-in could not start.",
+                    )
+                }
+                return@launch
+            }
+            _uiState.update { it.copy(grokDeviceCode = deviceCode) }
+
+            grokRepository.completeDeviceLogin(deviceCode).fold(
+                onSuccess = {
+                    val interval = preferencesStore.refreshIntervalSeconds.first()
+                    workManagerScheduler.scheduleSync(interval)
+                    workManagerScheduler.schedulePeriodicFallback()
+                    _uiState.update {
+                        it.copy(
+                            isGrokConnected = true,
+                            isGrokConnecting = false,
+                            grokDeviceCode = null,
+                            grokSignInError = null,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isGrokConnecting = false,
+                            grokDeviceCode = null,
+                            grokSignInError = error.message ?: "Grok sign-in failed.",
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun cancelGrokConnection() {
+        grokLoginJob?.cancel()
+        grokLoginJob = null
+        _uiState.update {
+            it.copy(
+                isGrokConnecting = false,
+                grokDeviceCode = null,
+                grokSignInError = null,
+            )
+        }
+    }
+
+    fun disconnectGrok() {
+        grokLoginJob?.cancel()
+        viewModelScope.launch {
+            grokRepository.disconnect()
+            _uiState.update {
+                it.copy(
+                    isGrokConnected = false,
+                    isGrokConnecting = false,
+                    grokDeviceCode = null,
+                    grokSignInError = null,
+                )
+            }
+        }
     }
 
     fun validateAndSaveKey() {
@@ -168,6 +335,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesStore.saveSelectedOrgId(null)
             repository.clearCachedData()
+            codexRepository.disconnect()
+            grokRepository.disconnect()
         }
         _uiState.update {
             SettingsUiState(
@@ -195,6 +364,8 @@ class SettingsViewModel @Inject constructor(
                 maskedSessionKey = existingKey?.let(::maskKey),
                 selectedOrgId = existingOrg,
                 isKeyValidated = existingKey != null,
+                isCodexConnected = codexRepository.isAuthenticated(),
+                isGrokConnected = grokRepository.isAuthenticated(),
             )
         }
 

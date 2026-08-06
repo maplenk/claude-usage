@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Claude Usage</string>
-    <string name="widget_description">Shows Claude AI usage metrics</string>
-    <string name="pill_widget_description">Claude usage progress bar</string>
+    <string name="app_name">OpenUsage</string>
+    <string name="widget_description">Shows Claude, Codex, and Grok usage limits</string>
+    <string name="pill_widget_description">Compact AI usage and reset countdown</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_title">Claude Usage</string>
+    <string name="dashboard_title">OpenUsage</string>
     <string name="session_label">Session (5h)</string>
     <string name="weekly_label">Weekly (7d)</string>
-    <string name="opus_label">Opus (7d)</string>
-    <string name="sonnet_label">Sonnet (7d)</string>
     <string name="last_updated">Last updated: %1$s</string>
     <string name="no_data">No data available</string>
     <string name="not_configured_title">Not Configured</string>

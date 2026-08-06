@@ -30,11 +30,17 @@ private val LightColorScheme = lightColorScheme(
     onSurface = OnSurfaceLight,
     surfaceVariant = SurfaceVariantLight,
     onSurfaceVariant = OnSurfaceVariantLight,
+    surfaceContainerLowest = SurfaceContainerLowestLight,
+    surfaceContainerLow = SurfaceContainerLowLight,
+    surfaceContainer = SurfaceContainerLight,
+    surfaceContainerHigh = SurfaceContainerHighLight,
+    surfaceContainerHighest = SurfaceContainerHighestLight,
     error = ErrorLight,
     onError = OnErrorLight,
     errorContainer = ErrorContainerLight,
     onErrorContainer = OnErrorContainerLight,
     outline = OutlineLight,
+    outlineVariant = OutlineVariantLight,
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,11 +62,17 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = OnSurfaceDark,
     surfaceVariant = SurfaceVariantDark,
     onSurfaceVariant = OnSurfaceVariantDark,
+    surfaceContainerLowest = SurfaceContainerLowestDark,
+    surfaceContainerLow = SurfaceContainerLowDark,
+    surfaceContainer = SurfaceContainerDark,
+    surfaceContainerHigh = SurfaceContainerHighDark,
+    surfaceContainerHighest = SurfaceContainerHighestDark,
     error = ErrorDark,
     onError = OnErrorDark,
     errorContainer = ErrorContainerDark,
     onErrorContainer = OnErrorContainerDark,
     outline = OutlineDark,
+    outlineVariant = OutlineVariantDark,
 )
 
 // --------------- Status color getters ---------------
@@ -86,10 +98,28 @@ val statusModerateContainerColor: Color
 val statusCriticalContainerColor: Color
     @Composable get() = if (isSystemInDarkTheme()) StatusCriticalContainerDark else StatusCriticalContainerLight
 
+val statusHighColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) StatusHighDark else StatusHighLight
+
+val statusHighContainerColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) StatusHighContainerDark else StatusHighContainerLight
+
+val statusUnknownColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) StatusUnknownDark else StatusUnknownLight
+
+val statusUnknownContainerColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) StatusUnknownContainerDark else StatusUnknownContainerLight
+
+val grokAccentColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) GrokAccentDark else GrokAccentLight
+
+val grokContainerColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) GrokContainerDark else GrokContainerLight
+
 @Composable
 fun ClaudeUsageTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {

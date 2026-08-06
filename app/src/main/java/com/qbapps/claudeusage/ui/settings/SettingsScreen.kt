@@ -24,7 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -39,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,13 +49,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.qbapps.claudeusage.R
+import com.qbapps.claudeusage.ui.components.ProviderBrand
+import com.qbapps.claudeusage.ui.components.ProviderMark
 import com.qbapps.claudeusage.ui.settings.components.RefreshIntervalSlider
 import com.qbapps.claudeusage.ui.settings.components.SessionKeyInput
+import com.qbapps.claudeusage.ui.theme.grokAccentColor
 import com.qbapps.claudeusage.worker.SyncLog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,11 +76,13 @@ fun SettingsScreen(
     var showClearDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showAdvanced by rememberSaveable { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
 
     Scaffold(
         modifier = modifier,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -93,7 +103,10 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                SettingsSectionCard(title = "Authentication") {
+                SettingsSectionCard(
+                    title = "Claude account",
+                    provider = ProviderBrand.CLAUDE,
+                ) {
                     if (state.maskedSessionKey != null) {
                         Text(
                             text = "Current key: ${state.maskedSessionKey}",
@@ -112,6 +125,205 @@ fun SettingsScreen(
                 }
             }
 
+            item {
+                SettingsSectionCard(
+                    title = "Codex account",
+                    provider = ProviderBrand.CODEX,
+                ) {
+                    when {
+                        state.isCodexConnected -> {
+                            Text(
+                                text = "Connected for weekly usage",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "The phone refreshes Codex directly; Android widgets receive only the weekly percentage and reset time.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            OutlinedButton(
+                                onClick = viewModel::disconnectCodex,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Disconnect Codex")
+                            }
+                        }
+                        state.codexDeviceCode != null -> {
+                            val deviceCode = checkNotNull(state.codexDeviceCode)
+                            Text(
+                                text = "Enter this one-time code to connect Codex:",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = deviceCode.userCode,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(deviceCode.userCode))
+                                    uriHandler.openUri(deviceCode.verificationUrl)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Copy Code & Open Sign-in")
+                            }
+                            OutlinedButton(
+                                onClick = viewModel::cancelCodexConnection,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Cancel")
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = "Waiting for authorization…",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        else -> {
+                            Text(
+                                text = "Connect with a one-time device code. Tokens stay encrypted on this phone and are never copied into widgets.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(
+                                onClick = viewModel::connectCodex,
+                                enabled = !state.isCodexConnecting,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                if (state.isCodexConnecting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.height(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
+                                    Spacer(Modifier.padding(horizontal = 4.dp))
+                                }
+                                Text(if (state.isCodexConnecting) "Starting…" else "Connect Codex")
+                            }
+                        }
+                    }
+                    state.codexSignInError?.let { error ->
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSectionCard(
+                    title = "Grok account",
+                    provider = ProviderBrand.GROK,
+                ) {
+                    when {
+                        state.isGrokConnected -> {
+                            Text(
+                                text = "Connected for weekly unified-billing usage",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = "OpenUsage refreshes directly from xAI. Access and refresh tokens stay encrypted on this phone.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            OutlinedButton(
+                                onClick = viewModel::disconnectGrok,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Disconnect Grok")
+                            }
+                        }
+                        state.grokDeviceCode != null -> {
+                            val deviceCode = checkNotNull(state.grokDeviceCode)
+                            Text(
+                                text = "Confirm this one-time code with xAI:",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = deviceCode.userCode,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(deviceCode.userCode))
+                                    uriHandler.openUri(
+                                        deviceCode.verificationUrlComplete ?: deviceCode.verificationUrl
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Copy Code & Open xAI")
+                            }
+                            OutlinedButton(
+                                onClick = viewModel::cancelGrokConnection,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Cancel")
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = "Waiting for xAI authorization…",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        else -> {
+                            Text(
+                                text = "Connect with xAI's device-code flow. No computer or local OpenUsage server is required after sign-in.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(
+                                onClick = viewModel::connectGrok,
+                                enabled = !state.isGrokConnecting,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                if (state.isGrokConnecting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.height(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
+                                    Spacer(Modifier.padding(horizontal = 4.dp))
+                                }
+                                Text(if (state.isGrokConnecting) "Starting…" else "Connect Grok")
+                            }
+                        }
+                    }
+                    state.grokSignInError?.let { error ->
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+
             if (state.isKeyValidated && state.organizations.isNotEmpty()) {
                 item {
                     SettingsSectionCard(title = "Organization") {
@@ -125,7 +337,7 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSectionCard(title = "Refresh & Notifications") {
+                SettingsSectionCard(title = "Refresh & alerts") {
                     RefreshIntervalSlider(
                         value = state.refreshInterval,
                         onValueChange = viewModel::updateRefreshInterval,
@@ -212,7 +424,7 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSectionCard(title = "Widget Preferences") {
+                SettingsSectionCard(title = "Android widgets") {
                     BatteryOptimizationSection()
                 }
             }
@@ -327,29 +539,53 @@ fun SettingsScreen(
 @Composable
 private fun SettingsSectionCard(
     title: String,
+    provider: ProviderBrand? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(start = 8.dp, bottom = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            provider?.let {
+                ProviderMark(
+                    provider = it,
+                    tint = settingsProviderAccent(it),
+                    size = 16.dp,
                 )
-                content()
-            },
-        )
+            }
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = provider?.let { settingsProviderAccent(it) }
+                    ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+                content = content,
+            )
+        }
     }
+}
+
+@Composable
+private fun settingsProviderAccent(provider: ProviderBrand) = when (provider) {
+    ProviderBrand.CLAUDE,
+    ProviderBrand.OPEN_USAGE -> MaterialTheme.colorScheme.primary
+    ProviderBrand.CODEX -> MaterialTheme.colorScheme.secondary
+    ProviderBrand.GROK -> grokAccentColor
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -455,7 +691,7 @@ private fun ExportLogSection(
                 val logText = SyncLog.getLog(context)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "Claude Usage - Sync Debug Log")
+                    putExtra(Intent.EXTRA_SUBJECT, "OpenUsage - Sync Debug Log")
                     putExtra(Intent.EXTRA_TEXT, logText)
                 }
                 context.startActivity(Intent.createChooser(intent, "Share debug log"))

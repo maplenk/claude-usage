@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ClaudeUsage"
+rootProject.name = "OpenUsage"
 include(":app")

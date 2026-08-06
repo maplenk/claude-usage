@@ -3,4 +3,7 @@
     <color name="widget_background">#FF1C1B1F</color>
     <color name="widget_text">#FFE6E1E5</color>
     <color name="widget_progress_track">#FF3C3C3C</color>
+    <color name="provider_claude_icon">#FFFFB786</color>
+    <color name="provider_codex_icon">#FFAFC6FF</color>
+    <color name="provider_grok_icon">#FFE3B7F5</color>
 </resources>

@@ -1,7 +1,7 @@
-# Claude Session Guardrail — Android
+# OpenUsage — AI Usage for Android
 
-Local-first Android **home screen widget** for Claude’s **5-hour session reset**.
-It shows **remaining time**, **risk**, and a simple **pace/trend signal** so you don’t hit the cap unexpectedly.
+Local-first Android dashboard and **home-screen widgets** for Claude session and weekly usage,
+Codex weekly usage, and Grok weekly unified-billing usage.
 
 > Widget-first by design. The app exists to set up the widget, show history, and tune notifications.
 
@@ -12,15 +12,16 @@ It shows **remaining time**, **risk**, and a simple **pace/trend signal** so you
 ## Why this exists
 
 Claude’s usage window is easy to lose track of while you’re deep in work.
-This utility keeps the most important signal on your home screen:
+This utility keeps the important provider limits together on your home screen:
 
-- **How much of the 5h session you’ve used**
-- **When the reset happens**
-- **Whether your current pace is risky**
+- **Claude session and weekly usage**
+- **Codex and Grok weekly usage**
+- **Used and remaining headroom for every available limit**
 
 ## Highlights
 
-- **Widget-first session UI**: ring progress + reset countdown + risk state
+- **OpenUsage dashboard**: one live Claude session hero with nested Claude weekly usage, plus Codex and Grok cards
+- **Direct provider refresh** from the phone; no always-on desktop bridge
 - **Local-only guardrail insights** (no remote analytics pipeline)
   - pace vs your usual at the same point in session
   - simple cap-risk prediction (“likely to exhaust before reset”)
@@ -28,17 +29,19 @@ This utility keeps the most important signal on your home screen:
   - reset relief (high usage is less scary when reset is soon)
 - **Local per-session history capture** (simple raw samples)
 - **Home-screen widget** with periodic background refresh
+- **Codex weekly usage** fetched directly on the phone with device-code sign-in and automatic token refresh
+- **Grok weekly usage** fetched directly with xAI device-code sign-in and automatic token refresh
 - **Optional notifications** for session reset + usage milestones + guardrail warnings
 
 ## Widgets
 
-Designed to scale from glanceable → informative:
+One responsive widget scales across three useful launcher sizes:
 
-- **1×1**: % used (quick glance)
-- **2×2**: % used + time to reset + risk / pace hint (recommended)
-- **4×2**: adds small context (history/trend) without becoming a dashboard
+- **2×2**: four compact usage rings for Claude session, Claude weekly, Codex weekly, and Grok weekly
+- **4×2**: four provider rows with usage bars, percentages, reset times, and sync status (recommended)
+- **4×3**: a larger Claude session hero plus Claude, Codex, and Grok weekly rows
 
-> The widget is the product. If you use only one thing, use the 2×2.
+Disconnected providers stay visible with a setup prompt, so the layout remains stable.
 
 ## Download APK
 
@@ -80,7 +83,7 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 
 ```bash
 # Run unit tests (requires JDK 17)
-./gradlew testDebugUnitTest
+./build.sh testDebugUnitTest
 ```
 
 ## Project Structure
@@ -185,28 +188,34 @@ cc-usage/
             └── values-night/colors.xml
 ```
 
+The Wear OS companion remains deliberately deferred; this release includes only the phone app and
+Android home-screen widgets.
+
 ## Architecture
 
 ```
-Claude API (Retrofit)
-       │
-       ▼
-  UsageRepositoryImpl ──► UsageDataStore (app cache)
-       │                        │
-       │                        ▼
-       │                  DashboardViewModel ──► Compose UI
-       │
-       ├──► pushDataToWidgets() ──► Glance Widget State ──► Widget UI
-       │
-       ▼
-  UsageSyncWorker (WorkManager)
-       │
-       └──► re-enqueues itself at configured interval
+Claude API ──► Phone UsageRepositoryImpl
+                         ├──► Phone DataStore / history
+                         ├──► Android home-screen widgets
+                         └──► Notifications
+
+Codex WHAM API ──► Phone CodexUsageRepositoryImpl
+                           ├──► Encrypted OAuth token storage
+                           ├──► Codex weekly DataStore cache
+                           ├──► Android dashboard
+                           └──► Android home-screen widgets
+
+Grok billing API ──► Phone GrokUsageRepositoryImpl
+                           ├──► Encrypted OAuth token storage
+                           ├──► Grok weekly DataStore cache
+                           ├──► Android dashboard
+                           └──► Android home-screen widgets
 ```
 
 - **Foreground**: ViewModel refresh loop at user-configured interval (5–300s)
 - **Background**: WorkManager OneTimeWork chain for sub-15-min intervals + 15-min periodic safety net
 - **Widget**: Reads from its own Glance Preferences DataStore, updated by repository on every fetch
+- **Wear OS**: no active module or phone-side sync in this release
 
 ## API
 
@@ -214,6 +223,22 @@ Claude API (Retrofit)
 |----------|--------|------|
 | `https://claude.ai/api/organizations` | GET | `Cookie: sessionKey=sk-ant-sid01-...` |
 | `https://claude.ai/api/organizations/{orgId}/usage` | GET | Same |
+| `https://chatgpt.com/backend-api/wham/usage` | GET | Codex device-login bearer token |
+| `https://cli-chat-proxy.grok.com/v1/billing?format=credits` | GET | xAI device-login bearer token |
+
+Codex authentication uses the Codex CLI's device-code flow. Access, refresh, and ID tokens are stored
+with Android Keystore-backed encrypted preferences and are never copied into widget state. The WHAM
+endpoint is not a public OpenAI API contract, so its response mapping may need maintenance if the
+ChatGPT backend changes.
+
+Grok authentication uses xAI's RFC 8628 device-code flow. OpenUsage stores its refreshable tokens in
+the same Android Keystore-backed encrypted preferences and reads only the weekly unified-billing meter.
+
+## Credits
+
+The multi-provider usage approach and direct provider integration research were informed by
+[OpenUsage by Robin Ebers](https://github.com/robinebers/openusage). This Android project is an
+independent implementation tailored to its dashboard and home-screen widgets.
 
 ## Key Dependencies
 
@@ -226,7 +251,7 @@ All versions managed in `gradle/libs.versions.toml`:
 - **DataStore** 1.1.1
 - **WorkManager** 2.10.0
 - **Security Crypto** 1.1.0-alpha06 (EncryptedSharedPreferences)
-- **Min SDK** 26 (Android 8.0) | **Target SDK** 35
+- **Min SDK** 26 | **Target SDK** 35
 
 ## Extract Your Session Key
 
@@ -246,8 +271,13 @@ All versions managed in `gradle/libs.versions.toml`:
 1. Open app → redirected to Settings if no session key
 2. Paste your Claude session key (`sk-ant-sid01-...`)
 3. Tap Validate → fetches organizations → select org
-4. Dashboard shows usage metrics, widget starts updating
-5. Add widget to home screen from widget picker
+4. Optionally connect Codex and Grok from their device-login cards
+5. Dashboard shows every connected provider and the widget starts updating
+6. Add the OpenUsage widget to the home screen from the widget picker
+
+To add Codex weekly usage, open Settings → Codex → **Connect Codex**, copy the one-time code,
+complete sign-in in the browser, and return to the app. The phone then refreshes Codex independently
+of the computer and synchronizes the weekly percentage and reset time to the dashboard and widget.
 
 ## Release Notes
 

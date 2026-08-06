@@ -18,7 +18,8 @@ object WidgetRingRenderer {
         percentage: Double,
         status: UsageStatus?,
         ringDp: Int = 110,
-        circularBackground: Boolean = false
+        circularBackground: Boolean = false,
+        label: String = "USED",
     ): Bitmap {
         val dark = isDarkMode(context)
         val density = context.resources.displayMetrics.density
@@ -31,7 +32,7 @@ object WidgetRingRenderer {
         if (circularBackground) {
             val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.FILL
-                color = if (dark) 0xFF2A2D35.toInt() else 0xFFD8DCE6.toInt()
+                color = if (dark) 0xFF1B1D20.toInt() else 0xFFF1EFEB.toInt()
             }
             canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
         }
@@ -45,7 +46,7 @@ object WidgetRingRenderer {
         val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             this.strokeWidth = strokeWidth
-            color = if (dark) 0xFF343A47.toInt() else 0xFFE3E7F1.toInt()
+            color = if (dark) 0xFF3A3A3D.toInt() else 0xFFCDCBC5.toInt()
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawArc(rect, 0f, 360f, false, trackPaint)
@@ -56,7 +57,7 @@ object WidgetRingRenderer {
             val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
                 this.strokeWidth = strokeWidth
-                color = colorForStatus(status, dark)
+                color = colorForUtilization(status, percentage, dark)
                 strokeCap = Paint.Cap.ROUND
             }
             canvas.drawArc(rect, -90f, sweep, false, progressPaint)
@@ -70,7 +71,7 @@ object WidgetRingRenderer {
             textAlign = Paint.Align.CENTER
             textSize = sizePx * if (isCompactRing) 0.30f else 0.24f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = if (dark) 0xFFE4E1E6.toInt() else 0xFF1B1B1F.toInt()
+            color = if (dark) 0xFFE6E3E1.toInt() else 0xFF1B1B1A.toInt()
         }
         val pctText = if (status != null) "${percentage.roundToInt()}%" else "--"
         val pctY = cy + pctPaint.textSize * 0.12f
@@ -82,9 +83,9 @@ object WidgetRingRenderer {
             textSize = sizePx * if (isCompactRing) 0.09f else 0.075f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             letterSpacing = 0.1f
-            color = if (dark) 0xFFA8A6B1.toInt() else 0xFF6A6A74.toInt()
+            color = if (dark) 0xFFA9A6A2.toInt() else 0xFF4A4844.toInt()
         }
-        canvas.drawText("SESSION", cx, pctY + pctPaint.textSize * 0.7f, labelPaint)
+        canvas.drawText(label, cx, pctY + pctPaint.textSize * 0.7f, labelPaint)
 
         return bitmap
     }
@@ -93,7 +94,8 @@ object WidgetRingRenderer {
         context: Context,
         resetsAt: Instant?,
         ringDp: Int = 52,
-        circularBackground: Boolean = false
+        circularBackground: Boolean = false,
+        windowMinutes: Long = 5 * 60L,
     ): Bitmap {
         val dark = isDarkMode(context)
         val density = context.resources.displayMetrics.density
@@ -105,7 +107,7 @@ object WidgetRingRenderer {
         if (circularBackground) {
             val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.FILL
-                color = if (dark) 0xFF2A2D35.toInt() else 0xFFD8DCE6.toInt()
+                color = if (dark) 0xFF1B1D20.toInt() else 0xFFF1EFEB.toInt()
             }
             canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, bgPaint)
         }
@@ -119,7 +121,7 @@ object WidgetRingRenderer {
         val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             this.strokeWidth = strokeWidth
-            color = if (dark) 0xFF343A47.toInt() else 0xFFE3E7F1.toInt()
+            color = if (dark) 0xFF3A3A3D.toInt() else 0xFFCDCBC5.toInt()
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawArc(rect, 0f, 360f, false, trackPaint)
@@ -129,12 +131,11 @@ object WidgetRingRenderer {
             val dur = java.time.Duration.between(java.time.Instant.now(), it)
             if (dur.isNegative) 0L else dur.toMinutes()
         } ?: 0L
-        val maxMinutes = 5 * 60L
-        val fraction = (remaining.toFloat() / maxMinutes).coerceIn(0f, 1f)
+        val fraction = (remaining.toFloat() / windowMinutes.coerceAtLeast(1L)).coerceIn(0f, 1f)
         val sweep = fraction * 360f
 
         if (sweep > 0f) {
-            val accentColor = if (dark) 0xFF90CAF9.toInt() else 0xFF1565C0.toInt()
+            val accentColor = if (dark) 0xFFFFB786.toInt() else 0xFF8F5024.toInt()
             val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
                 this.strokeWidth = strokeWidth
@@ -163,7 +164,7 @@ object WidgetRingRenderer {
             textAlign = Paint.Align.CENTER
             textSize = sizePx * if (isCompactRing) 0.26f else 0.22f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = if (dark) 0xFFE4E1E6.toInt() else 0xFF1B1B1F.toInt()
+            color = if (dark) 0xFFE6E3E1.toInt() else 0xFF1B1B1A.toInt()
         }
         val timeY = cy + timePaint.textSize * 0.12f
         canvas.drawText(countdownText, cx, timeY, timePaint)
@@ -174,17 +175,19 @@ object WidgetRingRenderer {
             textSize = sizePx * if (isCompactRing) 0.09f else 0.075f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             letterSpacing = 0.1f
-            color = if (dark) 0xFFA8A6B1.toInt() else 0xFF6A6A74.toInt()
+            color = if (dark) 0xFFA9A6A2.toInt() else 0xFF4A4844.toInt()
         }
         canvas.drawText("RESETS", cx, timeY + timePaint.textSize * 0.7f, labelPaint)
 
         return bitmap
     }
 
-    private fun colorForStatus(status: UsageStatus?, dark: Boolean): Int = when (status) {
-        UsageStatus.CRITICAL -> if (dark) 0xFFEF9A9A.toInt() else 0xFFC62828.toInt()
-        UsageStatus.MODERATE -> if (dark) 0xFFFFD54F.toInt() else 0xFFF9A825.toInt()
-        else -> if (dark) 0xFF81C784.toInt() else 0xFF2E7D32.toInt()
+    private fun colorForUtilization(status: UsageStatus?, percentage: Double, dark: Boolean): Int = when {
+        status == null -> if (dark) 0xFFC9C6C2.toInt() else 0xFF4A4844.toInt()
+        percentage >= 90.0 -> if (dark) 0xFFFFB4AB.toInt() else 0xFFA8261F.toInt()
+        percentage >= 75.0 -> if (dark) 0xFFFFB59A.toInt() else 0xFF99400F.toInt()
+        percentage >= 50.0 -> if (dark) 0xFFF4C044.toInt() else 0xFF7A5900.toInt()
+        else -> if (dark) 0xFF6FDBC4.toInt() else 0xFF10695B.toInt()
     }
 
     private fun isDarkMode(context: Context): Boolean =

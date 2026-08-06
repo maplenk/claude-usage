@@ -11,7 +11,10 @@
     <color name="status_critical">#FFE53935</color>
 
     <!-- Launcher icon -->
-    <color name="ic_launcher_background">#FF0E1016</color>
+    <color name="ic_launcher_background">#FF111214</color>
+    <color name="provider_claude_icon">#FF8F5024</color>
+    <color name="provider_codex_icon">#FF3A5BA0</color>
+    <color name="provider_grok_icon">#FF7B3F9E</color>
 
     <!-- Widget -->
     <color name="widget_background">#FFFFFFFF</color>

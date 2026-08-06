@@ -10,6 +10,7 @@ import com.qbapps.claudeusage.data.mapper.toDomain
 import com.qbapps.claudeusage.data.remote.ClaudeApiService
 import com.qbapps.claudeusage.domain.guardrail.PaceTrack
 import com.qbapps.claudeusage.domain.guardrail.SessionGuardrailEvaluator
+import com.qbapps.claudeusage.domain.guardrail.SessionGuardrailInsights
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.domain.model.Organization
 import com.qbapps.claudeusage.domain.model.UsageError
@@ -46,7 +47,7 @@ class UsageRepositoryImpl @Inject constructor(
     override val cachedUsage: Flow<ClaudeUsage?> = usageDataStore.cachedUsage
     override val usageHistory: Flow<List<UsageHistoryPoint>> = usageHistoryStore.history
 
-    override suspend fun fetchUsage(): Result<ClaudeUsage> {
+    override suspend fun fetchUsage(urgent: Boolean): Result<ClaudeUsage> {
         val now = System.currentTimeMillis()
         if (now - lastFetchTimeMs < minFetchIntervalMs) {
             return Result.failure(usageError(UsageError.RateLimited))
@@ -83,13 +84,17 @@ class UsageRepositoryImpl @Inject constructor(
                         "history append skipped: ${error.message ?: "unknown"}"
                     )
                 }
-            runCatching { maybeNotifyGuardrailSignals(usage) }
+            val insights = SessionGuardrailEvaluator.evaluate(
+                currentMetric = usage.fiveHour,
+                history = usageHistoryStore.history.value,
+            )
+            runCatching { maybeNotifyGuardrailSignals(usage, insights) }
                 .onFailure { error ->
                     SyncLog.d(
                         context,
                         "guardrail notifications skipped: ${error.message ?: "unknown"}"
                     )
-                }
+            }
             pushDataToWidgets(context, usage)
             runCatching { maybeUpdatePersistentNotification(usage) }
                 .onFailure { error ->
@@ -216,14 +221,12 @@ class UsageRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun maybeNotifyGuardrailSignals(usage: ClaudeUsage) {
+    private suspend fun maybeNotifyGuardrailSignals(
+        usage: ClaudeUsage,
+        insights: SessionGuardrailInsights,
+    ) {
         val shouldNotify = userPreferencesStore.notifyOnUsageThresholds.first()
         if (!shouldNotify) return
-
-        val insights = SessionGuardrailEvaluator.evaluate(
-            currentMetric = usage.fiveHour,
-            history = usageHistoryStore.history.value,
-        )
 
         val sessionEpoch = usage.fiveHour?.resetsAt?.toEpochMilli()
         var state = userPreferencesStore.getGuardrailState()

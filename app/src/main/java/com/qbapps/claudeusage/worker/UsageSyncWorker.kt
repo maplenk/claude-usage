@@ -12,6 +12,8 @@ import androidx.work.WorkerParameters
 import com.qbapps.claudeusage.data.local.UsageDataStore
 import com.qbapps.claudeusage.data.local.UserPreferencesStore
 import com.qbapps.claudeusage.domain.repository.UsageRepository
+import com.qbapps.claudeusage.domain.repository.CodexUsageRepository
+import com.qbapps.claudeusage.domain.repository.GrokUsageRepository
 import com.qbapps.claudeusage.notification.UsageNotificationHelper
 import com.qbapps.claudeusage.widget.pushDataToWidgets
 import dagger.assisted.Assisted
@@ -34,6 +36,8 @@ class UsageSyncWorker @AssistedInject constructor(
     @Assisted private val appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val usageRepository: UsageRepository,
+    private val codexUsageRepository: CodexUsageRepository,
+    private val grokUsageRepository: GrokUsageRepository,
     private val userPreferencesStore: UserPreferencesStore,
     private val usageDataStore: UsageDataStore,
     private val notificationHelper: UsageNotificationHelper,
@@ -46,6 +50,16 @@ class UsageSyncWorker @AssistedInject constructor(
         val previousFiveHour = usageDataStore.cachedUsage.first()?.fiveHour?.utilization
 
         val result = usageRepository.fetchUsage()
+        val codexResult = if (codexUsageRepository.isAuthenticated()) {
+            codexUsageRepository.fetchWeekly()
+        } else {
+            null
+        }
+        val grokResult = if (grokUsageRepository.isAuthenticated()) {
+            grokUsageRepository.fetchWeekly()
+        } else {
+            null
+        }
 
         if (result.isSuccess) {
             val newUsage = result.getOrNull()
@@ -71,6 +85,36 @@ class UsageSyncWorker @AssistedInject constructor(
             val error = result.exceptionOrNull()
             SyncLog.d(appContext, "fetch FAILED  error=${error?.message ?: "unknown"}")
         }
+
+        codexResult?.fold(
+            onSuccess = { usage ->
+                SyncLog.d(
+                    appContext,
+                    "Codex fetch OK weekly=${"%.1f%%".format(usage.weekly.utilization)}",
+                )
+            },
+            onFailure = { error ->
+                SyncLog.d(
+                    appContext,
+                    "Codex fetch FAILED error=${error.message ?: "unknown"}",
+                )
+            },
+        )
+
+        grokResult?.fold(
+            onSuccess = { usage ->
+                SyncLog.d(
+                    appContext,
+                    "Grok fetch OK weekly=${"%.1f%%".format(usage.weekly.utilization)}",
+                )
+            },
+            onFailure = { error ->
+                SyncLog.d(
+                    appContext,
+                    "Grok fetch FAILED error=${error.message ?: "unknown"}",
+                )
+            },
+        )
 
         // Always schedule the next sync so the chain never breaks.
         // We return success() in all cases — rescheduling is handled by us,

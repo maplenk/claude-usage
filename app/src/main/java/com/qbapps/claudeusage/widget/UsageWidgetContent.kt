@@ -28,284 +28,369 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.qbapps.claudeusage.R
-import com.qbapps.claudeusage.domain.model.ClaudeUsage
-import com.qbapps.claudeusage.domain.model.UsageStatus
 import java.time.Duration
 import java.time.Instant
 
-enum class WidgetSize {
-    SMALL,
-    MEDIUM,
-    LARGE,
-}
+enum class WidgetSize { QUAD, RAIL, HERO }
 
-private val Surface = ColorProvider(day = Color(0xFFF6F7FB), night = Color(0xFF111217))
-private val SurfaceElevated = ColorProvider(day = Color(0xFFECEFF8), night = Color(0xFF1E222B))
-private val PrimaryText = ColorProvider(day = Color(0xFF1B1B1F), night = Color(0xFFF4EEE4))
-private val SecondaryText = ColorProvider(day = Color(0xFF454957), night = Color(0xFFD7D0C7))
-private val TertiaryText = ColorProvider(day = Color(0xFF6C6F7E), night = Color(0xFFAFA89E))
-private val RefreshBtnBg = ColorProvider(day = Color(0xFFE0E5F2), night = Color(0xFF2B313B))
+private val Surface = ColorProvider(day = Color(0xFFFFFFFF), night = Color(0xFF1B1D20))
+private val PrimaryText = ColorProvider(day = Color(0xFF1B1B1A), night = Color(0xFFE6E3E1))
+private val SecondaryText = ColorProvider(day = Color(0xFF4A4844), night = Color(0xFFA9A6A2))
+private val TertiaryText = ColorProvider(day = Color(0xFF7B7972), night = Color(0xFF7A7873))
+private val Track = ColorProvider(day = Color(0xFFE5E3DE), night = Color(0xFF313337))
+private val RefreshButton = ColorProvider(day = Color(0xFFEBE9E4), night = Color(0xFF26282C))
+private val Normal = ColorProvider(day = Color(0xFF10695B), night = Color(0xFF6FDBC4))
+private val Elevated = ColorProvider(day = Color(0xFF7A5900), night = Color(0xFFF4C044))
+private val High = ColorProvider(day = Color(0xFF99400F), night = Color(0xFFFFB59A))
+private val Critical = ColorProvider(day = Color(0xFFA8261F), night = Color(0xFFFFB4AB))
+private val Unknown = ColorProvider(day = Color(0xFF4A4844), night = Color(0xFFC9C6C2))
+
+private val ClaudeAccent = ColorProvider(day = Color(0xFF8F5024), night = Color(0xFFFFB786))
+private val CodexAccent = ColorProvider(day = Color(0xFF3A5BA0), night = Color(0xFFAFC6FF))
+private val GrokAccent = ColorProvider(day = Color(0xFF7B3F9E), night = Color(0xFFE3B7F5))
 
 @Composable
-fun UsageWidgetContent(usage: ClaudeUsage?, widgetSize: WidgetSize) {
-    val baseModifier = GlanceModifier
-        .fillMaxSize()
-        .clickable(actionRunCallback<OpenAppActionCallback>())
-
-    val modifier = when (widgetSize) {
-        WidgetSize.SMALL -> baseModifier
-        WidgetSize.MEDIUM -> baseModifier.background(
-            ImageProvider(R.drawable.widget_background_semi)
-        )
-        WidgetSize.LARGE -> baseModifier.background(Surface)
-    }
-
+internal fun UsageWidgetContent(data: HeadroomWidgetData?, widgetSize: WidgetSize) {
     Box(
-        modifier = modifier,
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .cornerRadius(26.dp)
+            .background(Surface)
+            .clickable(actionRunCallback<OpenAppActionCallback>()),
         contentAlignment = Alignment.Center,
     ) {
-        if (usage == null) {
-            EmptyState(widgetSize)
+        if (data == null) {
+            EmptyState()
         } else {
             when (widgetSize) {
-                WidgetSize.SMALL -> SmallLayout(usage)
-                WidgetSize.MEDIUM -> MediumLayout(usage)
-                WidgetSize.LARGE -> LargeLayout(usage)
+                WidgetSize.QUAD -> QuadLayout(data.metrics)
+                WidgetSize.RAIL -> RailLayout(data)
+                WidgetSize.HERO -> HeroRailLayout(data)
             }
         }
     }
 }
 
 @Composable
-private fun EmptyState(widgetSize: WidgetSize) {
-    if (widgetSize == WidgetSize.SMALL) {
-        Text(
-            "C",
-            style = TextStyle(color = SecondaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold),
-        )
-    } else {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Claude",
-                style = TextStyle(color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Bold),
-            )
-            Spacer(GlanceModifier.height(2.dp))
-            Text("Tap to set up", style = TextStyle(color = SecondaryText, fontSize = 10.sp))
+private fun EmptyState() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("OpenUsage", style = TextStyle(color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+        Text("Tap to connect", style = TextStyle(color = SecondaryText, fontSize = 9.sp))
+    }
+}
+
+@Composable
+private fun QuadLayout(metrics: List<WidgetMetric>) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize().padding(5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        QuadRow(metrics.take(2))
+        Spacer(GlanceModifier.height(2.dp))
+        QuadRow(metrics.drop(2).take(2))
+    }
+}
+
+@Composable
+private fun QuadRow(metrics: List<WidgetMetric>) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().height(53.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        metrics.forEachIndexed { index, metric ->
+            QuadMetric(metric)
+            if (index == 0) Spacer(GlanceModifier.width(3.dp))
         }
     }
 }
 
 @Composable
-private fun SmallLayout(usage: ClaudeUsage) {
+private fun QuadMetric(metric: WidgetMetric) {
     val context = LocalContext.current
-    val metric = usage.fiveHour
-    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
-
+    val used = metric.usedPercent
     val bitmap = WidgetRingRenderer.render(
         context = context,
-        percentage = pct,
-        status = metric?.effectiveStatus(),
-        ringDp = 59,
-        circularBackground = true,
+        percentage = used?.toDouble() ?: 0.0,
+        status = metric.metric?.effectiveStatus(),
+        ringDp = 48,
+        label = metric.quadLabel(),
     )
-
-    Image(
-        provider = ImageProvider(bitmap),
-        contentDescription = "Session ${pct.toInt()}%",
-        modifier = GlanceModifier.size(59.dp),
-        contentScale = ContentScale.Fit,
-    )
-}
-
-@Composable
-private fun MediumLayout(usage: ClaudeUsage) {
-    val context = LocalContext.current
-    val metric = usage.fiveHour
-    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
-
-    val ringSize = 56
-    val pctBitmap = WidgetRingRenderer.render(context, pct, metric?.effectiveStatus(), ringDp = ringSize)
-    val resetBitmap = WidgetRingRenderer.renderCountdown(
-        context = context,
-        resetsAt = metric?.resetsAt,
-        ringDp = ringSize,
-    )
-
-    Row(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        modifier = GlanceModifier.width(51.dp).height(51.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Image(
-            provider = ImageProvider(pctBitmap),
-            contentDescription = "Session ${pct.toInt()}%",
-            modifier = GlanceModifier.size(ringSize.dp),
+            provider = ImageProvider(bitmap),
+            contentDescription = metric.accessibilityLabel(),
+            modifier = GlanceModifier.size(48.dp),
             contentScale = ContentScale.Fit,
         )
-        Spacer(GlanceModifier.width(12.dp))
-        Image(
-            provider = ImageProvider(resetBitmap),
-            contentDescription = "Reset countdown",
-            modifier = GlanceModifier.size(ringSize.dp),
-            contentScale = ContentScale.Fit,
-        )
+        Box(
+            modifier = GlanceModifier.fillMaxSize().padding(end = 1.dp, bottom = 1.dp),
+            contentAlignment = Alignment.BottomEnd,
+        ) {
+            Image(
+                provider = ImageProvider(metric.iconRes),
+                contentDescription = metric.provider,
+                modifier = GlanceModifier.size(10.dp),
+            )
+        }
     }
 }
 
 @Composable
-private fun LargeLayout(usage: ClaudeUsage) {
+private fun RailLayout(data: HeadroomWidgetData) {
+    Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 9.dp, vertical = 6.dp)) {
+        data.metrics.forEach { metric ->
+            RailMetricRow(metric = metric, stale = data.isStale, compact = false)
+        }
+        WidgetFooter(data = data, showRefresh = false)
+    }
+}
+
+@Composable
+private fun HeroRailLayout(data: HeadroomWidgetData) {
+    val session = data.metrics.first()
     val context = LocalContext.current
-    val metric = usage.fiveHour
-    val pct = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0) ?: 0.0
-    val modelMetric = usage.currentModelMetric()
+    val used = session.usedPercent
+    val ring = WidgetRingRenderer.render(
+        context = context,
+        percentage = used?.toDouble() ?: 0.0,
+        status = session.metric?.effectiveStatus(),
+        ringDp = 76,
+        label = "SESSION",
+    )
 
-    val bitmap = WidgetRingRenderer.render(context, pct, metric?.effectiveStatus(), ringDp = 80)
-
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .padding(8.dp),
-    ) {
+    Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp)) {
         Row(
-            modifier = GlanceModifier.fillMaxWidth(),
+            modifier = GlanceModifier.fillMaxWidth().height(84.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                provider = ImageProvider(bitmap),
-                contentDescription = "Session ${pct.toInt()}%",
-                modifier = GlanceModifier.size(80.dp),
+                provider = ImageProvider(ring),
+                contentDescription = session.accessibilityLabel(),
+                modifier = GlanceModifier.size(76.dp),
                 contentScale = ContentScale.Fit,
             )
             Spacer(GlanceModifier.width(10.dp))
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Session",
-                        style = TextStyle(color = PrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                    )
-                    Spacer(GlanceModifier.width(4.dp))
-                    StatusDot(metric?.status, size = 7.dp)
+                    Image(ImageProvider(session.iconRes), "Claude", GlanceModifier.size(15.dp))
+                    Spacer(GlanceModifier.width(5.dp))
+                    Text("CLAUDE", style = TextStyle(color = ClaudeAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold))
                 }
-                Spacer(GlanceModifier.height(2.dp))
+                Spacer(GlanceModifier.height(5.dp))
+                StatusLabel(metric = session, stale = data.isStale)
+                Spacer(GlanceModifier.height(7.dp))
+                Text("Resets in", style = TextStyle(color = TertiaryText, fontSize = 8.sp))
                 Text(
-                    "${pct.toInt()}% used",
-                    style = TextStyle(color = PrimaryText, fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                )
-                Spacer(GlanceModifier.height(2.dp))
-                Text(
-                    metric?.resetsAt?.let { formatCountdown(it) } ?: "Ready",
-                    style = TextStyle(color = SecondaryText, fontSize = 10.sp),
+                    text = formatReset(session.metric?.resetsAt, data.isStale),
+                    style = TextStyle(color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold),
                 )
             }
         }
 
-        Spacer(GlanceModifier.height(6.dp))
+        data.metrics.drop(1).forEach { metric ->
+            RailMetricRow(metric = metric, stale = data.isStale, compact = true)
+        }
+        WidgetFooter(data = data, showRefresh = true)
+    }
+}
 
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MetricPill("Weekly", usage.sevenDay?.utilization)
-            Spacer(GlanceModifier.width(6.dp))
-            MetricPill(modelMetric.first, modelMetric.second)
-            Box(
-                modifier = GlanceModifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
+@Composable
+private fun RailMetricRow(metric: WidgetMetric, stale: Boolean, compact: Boolean) {
+    val used = metric.usedPercent
+    val rowHeight = if (compact) 19.dp else 22.dp
+    val barWidth = if (compact) 76 else 72
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().height(rowHeight),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            provider = ImageProvider(metric.iconRes),
+            contentDescription = metric.provider,
+            modifier = GlanceModifier.size(if (compact) 13.dp else 15.dp),
+        )
+        Spacer(GlanceModifier.width(5.dp))
+        Text(
+            text = metric.railLabel(),
+            style = TextStyle(
+                color = if (metric.label == "Session") PrimaryText else SecondaryText,
+                fontSize = if (compact) 8.sp else 9.sp,
+                fontWeight = if (metric.label == "Session") FontWeight.Bold else FontWeight.Normal,
+            ),
+            modifier = GlanceModifier.width(if (compact) 54.dp else 58.dp),
+        )
+        Spacer(GlanceModifier.width(5.dp))
+        if (used == null) {
+            Text("Not connected", style = TextStyle(color = TertiaryText, fontSize = 8.sp))
+            Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Text("Add", style = TextStyle(color = providerAccent(metric.provider), fontSize = 8.sp, fontWeight = FontWeight.Bold))
+            }
+        } else {
+            UsageBar(
+                percent = used,
+                stale = stale,
+                widthDp = barWidth,
+            )
+            Spacer(GlanceModifier.width(7.dp))
+            Text(
+                text = "$used%",
+                style = TextStyle(color = PrimaryText, fontSize = if (compact) 9.sp else 10.sp, fontWeight = FontWeight.Bold),
+                modifier = GlanceModifier.width(31.dp),
+            )
+            Text(
+                text = formatReset(metric.metric?.resetsAt, stale),
+                style = TextStyle(color = TertiaryText, fontSize = if (compact) 7.sp else 8.sp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun UsageBar(percent: Int, stale: Boolean, widthDp: Int) {
+    val color = severityColor(percent, stale)
+    Box(
+        modifier = GlanceModifier
+            .width(widthDp.dp)
+            .height(6.dp)
+            .cornerRadius(3.dp)
+            .background(Track),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = GlanceModifier
+                .width((widthDp * percent.coerceIn(0, 100) / 100f).dp)
+                .height(6.dp)
+                .cornerRadius(3.dp)
+                .background(color),
+        ) {}
+    }
+}
+
+@Composable
+private fun StatusLabel(metric: WidgetMetric, stale: Boolean) {
+    val used = metric.usedPercent
+    Text(
+        text = when {
+            stale -> "◷  STALE"
+            used == null -> "◷  NOT CONNECTED"
+            used >= 90 -> "▲  CRITICAL"
+            used >= 75 -> "◆  HIGH"
+            used >= 50 -> "◐  ELEVATED"
+            else -> "●  NORMAL"
+        },
+        style = TextStyle(
+            color = if (used == null) Unknown else severityColor(used, stale),
+            fontSize = 8.sp,
+            fontWeight = FontWeight.Bold,
+        ),
+    )
+}
+
+@Composable
+private fun WidgetFooter(data: HeadroomWidgetData, showRefresh: Boolean) {
+    val worst = data.metrics.mapNotNull { it.usedPercent }.maxOrNull()
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().height(17.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (data.isStale) "◷ Data from ${formatAge(data.oldestFetchedAt)}" else "● Synced ${formatAge(data.oldestFetchedAt)}",
+            style = TextStyle(
+                color = if (data.isStale) Unknown else Normal,
+                fontSize = 7.sp,
+            ),
+        )
+        Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            if (showRefresh) {
                 Box(
                     modifier = GlanceModifier
-                        .size(26.dp)
-                        .cornerRadius(13.dp)
-                        .background(RefreshBtnBg)
+                        .size(17.dp)
+                        .cornerRadius(9.dp)
+                        .background(RefreshButton)
                         .clickable(actionRunCallback<RefreshActionCallback>()),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("\u21BB", style = TextStyle(color = SecondaryText, fontSize = 13.sp))
+                    Text("↻", style = TextStyle(color = SecondaryText, fontSize = 9.sp))
                 }
+            } else if (worst != null) {
+                Text(
+                    text = worstStatusLabel(data.metrics),
+                    style = TextStyle(color = severityColor(worst, data.isStale), fontSize = 7.sp, fontWeight = FontWeight.Bold),
+                )
             }
         }
-
-        Spacer(GlanceModifier.height(4.dp))
-        Text(
-            text = "Updated ${formatRelativeTime(usage.fetchedAt)}",
-            style = TextStyle(color = TertiaryText, fontSize = 10.sp),
-        )
     }
 }
 
-@Composable
-private fun MetricPill(
-    label: String,
-    value: Double?,
-) {
-    Box(
-        modifier = GlanceModifier
-            .cornerRadius(10.dp)
-            .background(SurfaceElevated)
-            .padding(4.dp),
-    ) {
-        Text(
-            text = "$label ${value.toWholePercent()}%",
-            style = TextStyle(color = PrimaryText, fontSize = 10.sp, fontWeight = FontWeight.Medium),
-        )
+private val HeadroomWidgetData.isStale: Boolean
+    get() = oldestFetchedAt?.let { Duration.between(it, Instant.now()).toMinutes() >= 10L } ?: true
+
+private fun WidgetMetric.quadLabel(): String = when {
+    label == "Session" -> "SESSION"
+    provider == "Claude" -> "CLAUDE WK"
+    provider == "Codex" -> "CODEX WK"
+    else -> "GROK WK"
+}
+
+private fun WidgetMetric.railLabel(): String = when {
+    label == "Session" -> "Session"
+    else -> "$provider wk"
+}
+
+private fun WidgetMetric.accessibilityLabel(): String = usedPercent?.let {
+    "$provider $label, $it percent used, ${remainingPercent ?: 0} percent left"
+} ?: "$provider $label not connected"
+
+private fun providerAccent(provider: String) = when (provider) {
+    "Codex" -> CodexAccent
+    "Grok" -> GrokAccent
+    else -> ClaudeAccent
+}
+
+private fun severityColor(percent: Int, stale: Boolean) = when {
+    stale -> Unknown
+    percent >= 90 -> Critical
+    percent >= 75 -> High
+    percent >= 50 -> Elevated
+    else -> Normal
+}
+
+private fun worstStatusLabel(metrics: List<WidgetMetric>): String {
+    val worst = metrics.maxByOrNull { it.usedPercent ?: -1 } ?: return ""
+    val used = worst.usedPercent ?: return ""
+    val state = when {
+        used >= 90 -> "CRITICAL"
+        used >= 75 -> "HIGH"
+        used >= 50 -> "ELEVATED"
+        else -> "NORMAL"
     }
+    return "◆ ${worst.provider.uppercase()} $state"
 }
 
-@Composable
-private fun StatusDot(
-    status: UsageStatus?,
-    size: androidx.compose.ui.unit.Dp = 6.dp,
-) {
-    Box(
-        modifier = GlanceModifier
-            .size(size)
-            .cornerRadius(size / 2f)
-            .background(statusColor(status)),
-    ) {}
-}
-
-private fun statusColor(status: UsageStatus?) = when (status) {
-    UsageStatus.CRITICAL -> ColorProvider(day = Color(0xFFC62828), night = Color(0xFFEF9A9A))
-    UsageStatus.MODERATE -> ColorProvider(day = Color(0xFFF9A825), night = Color(0xFFFFD54F))
-    else -> ColorProvider(day = Color(0xFF2E7D32), night = Color(0xFF81C784))
-}
-
-private fun formatCountdown(resetsAt: Instant): String {
+private fun formatReset(resetsAt: Instant?, stale: Boolean): String {
+    if (resetsAt == null) return "—"
     val remaining = Duration.between(Instant.now(), resetsAt)
     if (remaining.isNegative || remaining.isZero) return "Ready"
-    val hours = remaining.toHours()
+    val prefix = if (stale) "~" else ""
+    val days = remaining.toDays()
+    val hours = remaining.toHours() % 24
     val minutes = remaining.toMinutes() % 60
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
-}
-
-private fun Double?.toWholePercent(): Int = this?.coerceIn(0.0, 100.0)?.toInt() ?: 0
-
-private fun ClaudeUsage.currentModelMetric(): Pair<String, Double?> {
-    val sonnet = sevenDaySonnet?.utilization
-    val opus = sevenDayOpus?.utilization
-    if (sonnet == null && opus == null) return "Model" to null
-    return if ((sonnet ?: Double.MIN_VALUE) >= (opus ?: Double.MIN_VALUE)) {
-        "Sonnet" to sonnet
-    } else {
-        "Opus" to opus
-    }
-}
-
-private fun formatRelativeTime(timestamp: Instant): String {
-    val elapsed = Duration.between(timestamp, Instant.now())
-    if (elapsed.isNegative) return "now"
-    val minutes = elapsed.toMinutes()
-    val hours = elapsed.toHours()
     return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        hours < 24 -> "${hours}h ago"
-        else -> "${elapsed.toDays()}d ago"
+        days > 0 -> "$prefix${days}d ${hours}h"
+        hours > 0 -> "$prefix${hours}h ${minutes}m"
+        else -> "$prefix${minutes}m"
     }
+}
+
+private fun formatAge(timestamp: Instant?): String {
+    if (timestamp == null) return "not yet"
+    val elapsed = Duration.between(timestamp, Instant.now())
+    if (elapsed.isNegative || elapsed.toMinutes() < 1L) return "just now"
+    if (elapsed.toMinutes() < 60L) return "${elapsed.toMinutes()}m ago"
+    if (elapsed.toHours() < 24L) return "${elapsed.toHours()}h ago"
+    return "${elapsed.toDays()}d ago"
 }

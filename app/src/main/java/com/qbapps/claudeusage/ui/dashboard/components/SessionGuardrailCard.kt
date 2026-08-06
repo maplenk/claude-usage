@@ -59,11 +59,15 @@ fun SessionGuardrailCard(
         )
     }
 
+    val shouldShowAdvisory = insights.willHitCapBeforeReset ||
+        (metric?.effectiveUtilization() ?: 0.0) >= 90.0
+    if (!shouldShowAdvisory) return
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
+            containerColor = MaterialTheme.colorScheme.errorContainer,
         ),
     ) {
         Column(
@@ -76,23 +80,27 @@ fun SessionGuardrailCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Session Guardrail",
+                    text = "▲  Pace advisory",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-                GuardrailStateBadge(state = insights.state)
             }
 
             Text(
-                text = stateSummary(insights),
+                text = if (insights.willHitCapBeforeReset) {
+                    "At this pace you may hit the cap in ${insights.predictedTimeToCapMinutes?.let(::formatMinutes) ?: "under an hour"}."
+                } else {
+                    "Very little session headroom remains."
+                },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onErrorContainer,
             )
-
-            InsightRow(label = "Pace", value = paceSummary(insights))
-            InsightRow(label = "Prediction", value = predictionSummary(insights))
-            InsightRow(label = "Burn pattern", value = burnPatternSummary(insights))
-            InsightRow(label = "Reset relief", value = resetReliefSummary(insights))
+            Text(
+                text = "Resets in ${insights.timeToResetMinutes?.let(::formatMinutes) ?: "—"}. Weekly limits are unaffected.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.82f),
+            )
         }
     }
 }

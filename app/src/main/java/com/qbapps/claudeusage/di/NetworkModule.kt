@@ -5,6 +5,11 @@ import com.google.gson.GsonBuilder
 import com.qbapps.claudeusage.BuildConfig
 import com.qbapps.claudeusage.data.remote.AuthInterceptor
 import com.qbapps.claudeusage.data.remote.ClaudeApiService
+import com.qbapps.claudeusage.data.remote.CodexApiContract
+import com.qbapps.claudeusage.data.remote.CodexAuthApiService
+import com.qbapps.claudeusage.data.remote.CodexUsageApiService
+import com.qbapps.claudeusage.data.remote.GrokApiContract
+import com.qbapps.claudeusage.data.remote.GrokApiService
 import com.qbapps.claudeusage.data.remote.UtilizationAdapter
 import dagger.Module
 import dagger.Provides
@@ -70,4 +75,78 @@ object NetworkModule {
     @Singleton
     fun provideClaudeApiService(retrofit: Retrofit): ClaudeApiService =
         retrofit.create(ClaudeApiService::class.java)
+
+    @Provides
+    @Singleton
+    @CodexHttpClient
+    fun provideCodexHttpClient(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(
+                HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BASIC
+                    redactHeader("Authorization")
+                    redactHeader("ChatGPT-Account-Id")
+                }
+            )
+        }
+        return builder.build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCodexAuthApiService(
+        @CodexHttpClient client: OkHttpClient,
+        gson: Gson,
+    ): CodexAuthApiService = Retrofit.Builder()
+        .baseUrl(CodexApiContract.AUTH_BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create(gson))
+        .build()
+        .create(CodexAuthApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCodexUsageApiService(
+        @CodexHttpClient client: OkHttpClient,
+        gson: Gson,
+    ): CodexUsageApiService = Retrofit.Builder()
+        .baseUrl(CodexApiContract.USAGE_BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create(gson))
+        .build()
+        .create(CodexUsageApiService::class.java)
+
+    @Provides
+    @Singleton
+    @GrokHttpClient
+    fun provideGrokHttpClient(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(
+                HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BASIC
+                    redactHeader("Authorization")
+                }
+            )
+        }
+        return builder.build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGrokApiService(
+        @GrokHttpClient client: OkHttpClient,
+        gson: Gson,
+    ): GrokApiService = Retrofit.Builder()
+        .baseUrl(GrokApiContract.BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create(gson))
+        .build()
+        .create(GrokApiService::class.java)
 }
