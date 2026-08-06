@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -75,43 +76,43 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = OutlineVariantDark,
 )
 
-// --------------- Status color getters ---------------
+// --------------- Status color getters (legacy names → guardrail system) ---------------
 
 /** Green when usage is safe. */
 val statusSafeColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusSafeDark else StatusSafeLight
+    @Composable get() = LocalOpenUsageColors.current.normal.fg
 
-/** Yellow/amber when usage is moderate. */
+/** Yellow/amber when usage is elevated. */
 val statusModerateColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusModerateDark else StatusModerateLight
+    @Composable get() = LocalOpenUsageColors.current.elevated.fg
 
 /** Red when usage is critical. */
 val statusCriticalColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusCriticalDark else StatusCriticalLight
+    @Composable get() = LocalOpenUsageColors.current.critical.fg
 
 val statusSafeContainerColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusSafeContainerDark else StatusSafeContainerLight
+    @Composable get() = LocalOpenUsageColors.current.normal.container
 
 val statusModerateContainerColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusModerateContainerDark else StatusModerateContainerLight
+    @Composable get() = LocalOpenUsageColors.current.elevated.container
 
 val statusCriticalContainerColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusCriticalContainerDark else StatusCriticalContainerLight
+    @Composable get() = LocalOpenUsageColors.current.critical.container
 
 val statusHighColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusHighDark else StatusHighLight
+    @Composable get() = LocalOpenUsageColors.current.high.fg
 
 val statusHighContainerColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusHighContainerDark else StatusHighContainerLight
+    @Composable get() = LocalOpenUsageColors.current.high.container
 
 val statusUnknownColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusUnknownDark else StatusUnknownLight
+    @Composable get() = LocalOpenUsageColors.current.unknown.fg
 
 val statusUnknownContainerColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) StatusUnknownContainerDark else StatusUnknownContainerLight
+    @Composable get() = LocalOpenUsageColors.current.unknown.container
 
 val grokAccentColor: Color
-    @Composable get() = if (isSystemInDarkTheme()) GrokAccentDark else GrokAccentLight
+    @Composable get() = LocalOpenUsageColors.current.grok
 
 val grokContainerColor: Color
     @Composable get() = if (isSystemInDarkTheme()) GrokContainerDark else GrokContainerLight
@@ -122,7 +123,7 @@ fun ClaudeUsageTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
+    val base = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -130,10 +131,26 @@ fun ClaudeUsageTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    // Codex must stay a distinct hue even under wallpaper theming — two providers
+    // must never collapse into one wallpaper hue.
+    val colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        base.copy(
+            secondary = if (darkTheme) SecondaryDark else SecondaryLight,
+            secondaryContainer = if (darkTheme) SecondaryContainerDark else SecondaryContainerLight,
+            onSecondaryContainer = if (darkTheme) OnSecondaryContainerDark else OnSecondaryContainerLight,
+        )
+    } else {
+        base
+    }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalOpenUsageColors provides if (darkTheme) DarkOpenUsageColors else LightOpenUsageColors,
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }

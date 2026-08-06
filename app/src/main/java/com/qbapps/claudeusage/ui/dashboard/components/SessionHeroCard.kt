@@ -1,43 +1,37 @@
 package com.qbapps.claudeusage.ui.dashboard.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.qbapps.claudeusage.domain.model.UsageMetric
 import com.qbapps.claudeusage.ui.components.ProviderBrand
 import com.qbapps.claudeusage.ui.components.ProviderMark
+import com.qbapps.claudeusage.ui.components.UsageIndicator
+import com.qbapps.claudeusage.ui.components.UsageIndicatorStyle
+import com.qbapps.claudeusage.ui.theme.OpenUsageShape
+import com.qbapps.claudeusage.ui.theme.OpenUsageText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.PI
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 @Composable
 fun SessionHeroCard(
@@ -45,10 +39,26 @@ fun SessionHeroCard(
     weeklyMetric: UsageMetric?,
     modifier: Modifier = Modifier,
     useRelativeTime: Boolean = true,
+    isStale: Boolean = false,
 ) {
+    val status = if (isStale && metric != null) {
+        HeadroomStatus.STALE
+    } else {
+        metric.headroomStatus()
+    }
+    val shape = OpenUsageShape.card
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 236.dp)
+            .then(
+                if (status == HeadroomStatus.CRITICAL) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.error, shape)
+                } else {
+                    Modifier
+                }
+            ),
+        shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
@@ -58,7 +68,14 @@ fun SessionHeroCard(
                 modifier = Modifier.padding(horizontal = 22.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ProviderLabel("CLAUDE · SESSION")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProviderLabel("CLAUDE · SESSION")
+                    HeadroomStatusChip(status)
+                }
                 Text(
                     text = "No session data yet",
                     style = MaterialTheme.typography.headlineSmall,
@@ -73,7 +90,6 @@ fun SessionHeroCard(
         }
 
         val utilization = metric.effectiveUtilization().coerceIn(0.0, 100.0)
-        val status = metric.headroomStatus()
 
         Column(
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp),
@@ -96,7 +112,7 @@ fun SessionHeroCard(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = utilization.roundToInt().toString(),
-                        style = MaterialTheme.typography.displayLarge,
+                        style = OpenUsageText.metricHero,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
@@ -108,21 +124,21 @@ fun SessionHeroCard(
                     )
                 }
                 Text(
-                    text = if (utilization >= 90.0) {
-                        "${(100.0 - utilization).coerceAtLeast(0.0).roundToInt()}% left"
-                    } else {
-                        "used"
-                    },
+                    text = "${(100.0 - utilization).coerceAtLeast(0.0).roundToInt()}% left",
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (utilization >= 90.0) status.foreground()
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (utilization >= 90.0) {
+                        status.foreground()
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
 
-            WavyUsageIndicator(
+            UsageIndicator(
                 progress = (utilization / 100.0).toFloat(),
                 color = status.foreground(),
+                style = if (isStale) UsageIndicatorStyle.STALE else UsageIndicatorStyle.WAVY,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(24.dp),
@@ -141,6 +157,11 @@ fun SessionHeroCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 when {
+                    isStale -> Text(
+                        text = "${metric.resetLabel(useRelativeTime)} est.",
+                        style = OpenUsageText.countdownSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     metric.isExpired() -> Text(
                         text = "Awaiting fresh data",
                         style = MaterialTheme.typography.bodyMedium,
@@ -153,13 +174,12 @@ fun SessionHeroCard(
                     )
                     useRelativeTime -> CountdownTimer(
                         resetsAt = metric.resetsAt,
-                        textStyle = MaterialTheme.typography.bodyMedium,
+                        textStyle = OpenUsageText.countdown,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     else -> Text(
                         text = formatAbsoluteReset(metric.resetsAt),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = OpenUsageText.countdown,
                     )
                 }
             }
@@ -168,6 +188,7 @@ fun SessionHeroCard(
             ClaudeWeeklyReading(
                 metric = weeklyMetric,
                 useRelativeTime = useRelativeTime,
+                isStale = isStale,
             )
         }
     }
@@ -186,9 +207,8 @@ internal fun ProviderLabel(label: String) {
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = OpenUsageText.providerLabel,
             color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -197,9 +217,14 @@ internal fun ProviderLabel(label: String) {
 private fun ClaudeWeeklyReading(
     metric: UsageMetric?,
     useRelativeTime: Boolean,
+    isStale: Boolean,
 ) {
     val utilization = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0)
-    val status = metric.headroomStatus()
+    val status = if (isStale && metric != null) {
+        HeadroomStatus.STALE
+    } else {
+        metric.headroomStatus()
+    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -217,9 +242,7 @@ private fun ClaudeWeeklyReading(
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = utilization?.roundToInt()?.toString() ?: "—",
-                    fontSize = 30.sp,
-                    lineHeight = 32.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    style = OpenUsageText.metricMedium,
                 )
                 if (utilization != null) {
                     Text(
@@ -230,71 +253,20 @@ private fun ClaudeWeeklyReading(
                 }
             }
             Text(
-                text = metric.resetLabel(useRelativeTime),
+                text = metric.resetLabel(useRelativeTime) + if (isStale) " est." else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 3.dp),
             )
         }
-        FlatUsageBar(
+        UsageIndicator(
             progress = ((utilization ?: 0.0) / 100.0).toFloat(),
             color = status.foreground(),
-            showThresholds = true,
+            style = if (isStale) UsageIndicatorStyle.STALE else UsageIndicatorStyle.FLAT,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(10.dp),
         )
-    }
-}
-
-@Composable
-private fun WavyUsageIndicator(
-    progress: Float,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
-) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(650),
-        label = "headroom_wavy_progress",
-    )
-    val track = MaterialTheme.colorScheme.outlineVariant
-    val thresholdSeparator = MaterialTheme.colorScheme.surfaceContainerLowest
-
-    Canvas(modifier = modifier) {
-        val centerY = size.height / 2f
-        val amplitude = 3.dp.toPx()
-        val wavelength = 18.dp.toPx()
-        val stroke = 5.dp.toPx()
-
-        fun wavePath(endX: Float): Path = Path().apply {
-            var x = 0f
-            moveTo(0f, centerY)
-            while (x <= endX) {
-                val y = centerY + sin((x / wavelength) * 2.0 * PI).toFloat() * amplitude
-                lineTo(x, y)
-                x += 2.dp.toPx()
-            }
-        }
-
-        drawPath(
-            path = wavePath(size.width),
-            color = track,
-            style = Stroke(width = stroke, cap = StrokeCap.Round),
-        )
-        if (animatedProgress > 0f) {
-            drawPath(
-                path = wavePath(size.width * animatedProgress),
-                color = color,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
-            )
-        }
-        listOf(0.50f, 0.75f, 0.90f).forEach { threshold ->
-            val x = size.width * threshold
-            drawLine(
-                color = thresholdSeparator,
-                start = Offset(x, centerY - 7.dp.toPx()),
-                end = Offset(x, centerY + 7.dp.toPx()),
-                strokeWidth = 2.dp.toPx(),
-            )
-        }
     }
 }
 

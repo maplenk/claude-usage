@@ -37,6 +37,18 @@
                 android:resource="@xml/usage_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".widget.FourLimitUsageWidgetReceiver"
+            android:exported="true"
+            android:label="@string/four_limit_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/four_limit_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

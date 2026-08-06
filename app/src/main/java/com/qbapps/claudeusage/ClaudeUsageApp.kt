@@ -26,7 +26,10 @@ class ClaudeUsageApp : Application(), Configuration.Provider {
     private fun ensureSyncRunning() {
         val hasKey = credentialStore.getSessionKey() != null
         val hasOrg = credentialStore.getOrgId() != null
-        if (hasKey && hasOrg) {
+        val hasAnyProvider = (hasKey && hasOrg) ||
+            credentialStore.getCodexTokens() != null ||
+            credentialStore.getGrokTokens() != null
+        if (hasAnyProvider) {
             workManagerScheduler.scheduleSync(5)
             workManagerScheduler.schedulePeriodicFallback()
         }

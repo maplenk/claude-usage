@@ -13,27 +13,45 @@ internal data class HeadroomWidgetData(
     val codex: CodexUsage?,
     val grok: GrokUsage?,
 ) {
-    val metrics: List<WidgetMetric>
+    /**
+     * The widget treats providers as peers. The long window is always the primary
+     * value; a short window is rendered as a subordinate hairline when available.
+     */
+    val providers: List<WidgetProvider>
         get() = listOf(
-            WidgetMetric("Claude", "Session", "5H", R.drawable.ic_provider_claude, claude?.fiveHour),
-            WidgetMetric("Claude", "Weekly", "7D", R.drawable.ic_provider_claude, claude?.sevenDay),
-            WidgetMetric("Codex", "Weekly", "7D", R.drawable.ic_provider_codex, codex?.weekly),
-            WidgetMetric("Grok", "Weekly", "7D", R.drawable.ic_provider_grok, grok?.weekly),
+            WidgetProvider(
+                provider = "Claude",
+                iconRes = R.drawable.ic_provider_claude,
+                longWindow = claude?.sevenDay,
+                liveWindow = claude?.fiveHour,
+            ),
+            WidgetProvider(
+                provider = "Codex",
+                iconRes = R.drawable.ic_provider_codex,
+                longWindow = codex?.weekly,
+            ),
+            WidgetProvider(
+                provider = "Grok",
+                iconRes = R.drawable.ic_provider_grok,
+                longWindow = grok?.weekly,
+            ),
         )
 
     val oldestFetchedAt: Instant?
         get() = listOfNotNull(claude?.fetchedAt, codex?.fetchedAt, grok?.fetchedAt).minOrNull()
 }
 
-internal data class WidgetMetric(
+internal data class WidgetProvider(
     val provider: String,
-    val label: String,
-    val window: String,
     @DrawableRes val iconRes: Int,
-    val metric: UsageMetric?,
+    val longWindow: UsageMetric?,
+    val liveWindow: UsageMetric? = null,
 ) {
     val usedPercent: Int?
-        get() = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0)?.toInt()
+        get() = longWindow?.effectiveUtilization()?.coerceIn(0.0, 100.0)?.toInt()
+
+    val liveUsedPercent: Int?
+        get() = liveWindow?.effectiveUtilization()?.coerceIn(0.0, 100.0)?.toInt()
 
     val remainingPercent: Int?
         get() = usedPercent?.let { (100 - it).coerceIn(0, 100) }

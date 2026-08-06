@@ -58,6 +58,34 @@
     <!-- Widget -->
     <string name="widget_configure">Configure in app</string>
     <string name="widget_loading">Loading…</string>
+    <string name="widget_preview_claude_weekly">Claude wk</string>
+    <string name="widget_preview_codex_weekly">Codex wk</string>
+    <string name="widget_preview_grok_weekly">Grok wk</string>
+    <string name="widget_preview_49">49</string>
+    <string name="widget_preview_47">47</string>
+    <string name="widget_preview_99">99</string>
+    <string name="widget_preview_reset_claude">1d 12h</string>
+    <string name="widget_preview_reset_codex">2d 4h</string>
+    <string name="widget_preview_reset_grok">4d 9h</string>
+    <string name="widget_preview_synced">Synced 3m ago</string>
+
+    <!-- Four-limit widget (design option 10a) -->
+    <string name="four_limit_widget_label">OpenUsage · Four limits</string>
+    <string name="four_limit_widget_description">Claude session plus Claude, Codex, and Grok weekly limits</string>
+    <string name="four_limit_preview_session">Session</string>
+    <string name="four_limit_preview_claude_weekly">Claude wk</string>
+    <string name="four_limit_preview_codex_weekly">Codex wk</string>
+    <string name="four_limit_preview_grok_weekly">Grok wk</string>
+    <string name="four_limit_preview_session_value" formatted="false">65%</string>
+    <string name="four_limit_preview_claude_value" formatted="false">23%</string>
+    <string name="four_limit_preview_codex_value" formatted="false">42%</string>
+    <string name="four_limit_preview_grok_value" formatted="false">81%</string>
+    <string name="four_limit_preview_session_reset">3h16m</string>
+    <string name="four_limit_preview_claude_reset">1d 12h</string>
+    <string name="four_limit_preview_codex_reset">2d 4h</string>
+    <string name="four_limit_preview_grok_reset">4d 9h</string>
+    <string name="four_limit_preview_synced">Synced 3m ago</string>
+    <string name="four_limit_preview_worst">GROK HIGH</string>
 
     <!-- Session Key Instructions -->
     <string name="session_key_instructions">To get your session key:\n1. Open claude.ai in your browser\n2. Open Developer Tools (F12)\n3. Go to Application → Cookies\n4. Find the \"sessionKey\" cookie\n5. Copy its value (starts with sk-ant-sid01-)</string>

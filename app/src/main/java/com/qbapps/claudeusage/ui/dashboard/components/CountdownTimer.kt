@@ -11,6 +11,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import java.time.Instant
 
@@ -27,13 +31,18 @@ fun CountdownTimer(
     textStyle: TextStyle = MaterialTheme.typography.bodySmall,
     color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    var remainingSeconds by remember { mutableLongStateOf(computeRemaining(resetsAt)) }
+    var remainingSeconds by remember(resetsAt) {
+        mutableLongStateOf(computeRemaining(resetsAt))
+    }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    LaunchedEffect(resetsAt) {
-        while (true) {
-            remainingSeconds = computeRemaining(resetsAt)
-            if (remainingSeconds <= 0L) break
-            delay(1_000L)
+    LaunchedEffect(resetsAt, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                remainingSeconds = computeRemaining(resetsAt)
+                if (remainingSeconds <= 0L) break
+                delay(1_000L)
+            }
         }
     }
 
@@ -57,13 +66,14 @@ private fun computeRemaining(target: Instant): Long {
 }
 
 private fun formatDuration(totalSeconds: Long): String {
-    val hours = totalSeconds / 3600
+    val days = totalSeconds / 86_400
+    val hours = (totalSeconds % 86_400) / 3_600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
 
-    return buildString {
-        if (hours > 0) append("${hours}h ")
-        if (hours > 0 || minutes > 0) append("${minutes}m ")
-        append("${seconds}s")
+    return when {
+        days > 0L -> "${days}d ${hours}h"
+        hours > 0L -> "${hours}h ${minutes}m ${seconds}s"
+        else -> "${minutes}m ${seconds}s"
     }
 }

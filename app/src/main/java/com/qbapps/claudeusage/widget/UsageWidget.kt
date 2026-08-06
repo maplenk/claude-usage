@@ -21,9 +21,10 @@ import java.time.Instant
 
 class UsageWidget : GlanceAppWidget() {
     companion object {
-        private val QUAD = DpSize(120.dp, 120.dp)
-        private val RAIL = DpSize(250.dp, 120.dp)
-        private val HERO = DpSize(250.dp, 180.dp)
+        private val COMPACT = DpSize(160.dp, 172.dp)
+        private val HORIZONTAL = DpSize(340.dp, 72.dp)
+        private val WIDE = DpSize(340.dp, 172.dp)
+        private val TALL = DpSize(340.dp, 250.dp)
 
         internal val FIVE_HOUR_UTIL = doublePreferencesKey("five_hour_utilization")
         internal val FIVE_HOUR_RESET = stringPreferencesKey("five_hour_resets_at")
@@ -45,7 +46,9 @@ class UsageWidget : GlanceAppWidget() {
         internal val GROK_FETCHED_AT = longPreferencesKey("grok_fetched_at_epoch_millis")
     }
 
-    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(QUAD, RAIL, HERO))
+    override val sizeMode: SizeMode = SizeMode.Responsive(
+        setOf(COMPACT, HORIZONTAL, WIDE, TALL)
+    )
     override val stateDefinition = UsageWidgetStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -93,7 +96,8 @@ private fun Preferences.readMetric(
 }
 
 private fun DpSize.toWidgetSize(): WidgetSize = when {
-    width >= 220.dp && height >= 160.dp -> WidgetSize.HERO
-    width >= 220.dp -> WidgetSize.RAIL
-    else -> WidgetSize.QUAD
+    width >= 300.dp && height >= 220.dp -> WidgetSize.TALL
+    width >= 300.dp && height >= 140.dp -> WidgetSize.WIDE
+    width >= 300.dp -> WidgetSize.HORIZONTAL
+    else -> WidgetSize.COMPACT
 }

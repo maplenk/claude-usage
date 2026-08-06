@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qbapps.claudeusage.data.local.SecureCredentialStore
 import com.qbapps.claudeusage.data.local.UserPreferencesStore
+import com.qbapps.claudeusage.data.network.NetworkMonitor
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.domain.model.CodexUsage
 import com.qbapps.claudeusage.domain.model.GrokUsage
@@ -23,7 +24,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 data class DashboardUiState(
@@ -42,6 +45,7 @@ data class DashboardUiState(
     val selectedOrgId: String? = null,
     val refreshIntervalSeconds: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
     val useRelativeTime: Boolean = true,
+    val syncState: SyncState = SyncState.Fresh(fetchedAt = null, ageMinutes = null),
 )
 
 @HiltViewModel
@@ -51,20 +55,25 @@ class DashboardViewModel @Inject constructor(
     private val grokRepository: GrokUsageRepository,
     private val credentialStore: SecureCredentialStore,
     private val preferencesStore: UserPreferencesStore,
+    private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     private var refreshJob: Job? = null
+    private var isOnline = true
+    private var networkStateKnown = false
 
     init {
         checkConfiguration()
+        observeNetwork()
         observeCachedUsage()
         observeCachedCodexUsage()
         observeCachedGrokUsage()
         observeUsageHistory()
         observeUserPreferences()
+        startSyncStateTicker()
         startRefreshLoop()
     }
 
@@ -93,19 +102,36 @@ class DashboardViewModel @Inject constructor(
         val hasCodex = codexRepository.isAuthenticated()
         val hasGrok = grokRepository.isAuthenticated()
         _uiState.update {
-            it.copy(
+            val updated = it.copy(
                 isConfigured = hasClaude || hasCodex || hasGrok,
                 isClaudeConfigured = hasClaude,
                 isCodexConfigured = hasCodex,
                 isGrokConfigured = hasGrok,
             )
+            updated.withSyncState(isOnline)
+        }
+    }
+
+    private fun observeNetwork() {
+        viewModelScope.launch {
+            networkMonitor.isOnline.collectLatest { online ->
+                val reconnected = networkStateKnown && !isOnline && online
+                isOnline = online
+                networkStateKnown = true
+                _uiState.update { it.withSyncState(isOnline) }
+                if (reconnected && _uiState.value.isConfigured) {
+                    fetchAndUpdate(urgent = true)
+                }
+            }
         }
     }
 
     private fun observeCachedUsage() {
         viewModelScope.launch {
             repository.cachedUsage.collectLatest { cached ->
-                _uiState.update { it.copy(usage = cached) }
+                _uiState.update {
+                    it.copy(usage = cached).withSyncState(isOnline)
+                }
             }
         }
     }
@@ -113,7 +139,9 @@ class DashboardViewModel @Inject constructor(
     private fun observeCachedCodexUsage() {
         viewModelScope.launch {
             codexRepository.cachedUsage.collectLatest { cached ->
-                _uiState.update { it.copy(codexUsage = cached) }
+                _uiState.update {
+                    it.copy(codexUsage = cached).withSyncState(isOnline)
+                }
             }
         }
     }
@@ -121,7 +149,9 @@ class DashboardViewModel @Inject constructor(
     private fun observeCachedGrokUsage() {
         viewModelScope.launch {
             grokRepository.cachedUsage.collectLatest { cached ->
-                _uiState.update { it.copy(grokUsage = cached) }
+                _uiState.update {
+                    it.copy(grokUsage = cached).withSyncState(isOnline)
+                }
             }
         }
     }
@@ -167,6 +197,15 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    private fun startSyncStateTicker() {
+        viewModelScope.launch {
+            while (isActive) {
+                _uiState.update { it.withSyncState(isOnline) }
+                delay(60_000L)
+            }
+        }
+    }
+
     private fun restartRefreshLoop() {
         startRefreshLoop()
     }
@@ -174,6 +213,12 @@ class DashboardViewModel @Inject constructor(
     private suspend fun fetchAndUpdate(urgent: Boolean = false) {
         val configuration = _uiState.value
         if (!configuration.isConfigured) return
+        if (!isOnline) {
+            _uiState.update {
+                it.copy(isLoading = false).withSyncState(isOnline = false)
+            }
+            return
+        }
         _uiState.update { it.copy(isLoading = true, error = null, codexError = null, grokError = null) }
 
         coroutineScope {
@@ -197,7 +242,7 @@ class DashboardViewModel @Inject constructor(
                 }
             }
             _uiState.update {
-                it.copy(
+                val updated = it.copy(
                     usage = claudeResult?.getOrNull() ?: it.usage,
                     codexUsage = codexResult?.getOrNull() ?: it.codexUsage,
                     grokUsage = grokResult?.getOrNull() ?: it.grokUsage,
@@ -206,7 +251,23 @@ class DashboardViewModel @Inject constructor(
                     codexError = codexResult?.exceptionOrNull()?.message,
                     grokError = grokResult?.exceptionOrNull()?.message,
                 )
+                updated.withSyncState(isOnline)
             }
         }
     }
 }
+
+private fun DashboardUiState.withSyncState(
+    isOnline: Boolean,
+    now: Instant = Instant.now(),
+): DashboardUiState = copy(
+    syncState = syncStateFor(
+        fetchedAt = listOfNotNull(
+            usage?.fetchedAt.takeIf { isClaudeConfigured },
+            codexUsage?.fetchedAt.takeIf { isCodexConfigured },
+            grokUsage?.fetchedAt.takeIf { isGrokConfigured },
+        ).minOrNull(),
+        isOnline = isOnline,
+        now = now,
+    ),
+)

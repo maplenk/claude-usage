@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_background">#FF1C1B1F</color>
-    <color name="widget_text">#FFE6E1E5</color>
-    <color name="widget_progress_track">#FF3C3C3C</color>
+    <color name="widget_background">#FF1B1D20</color>
+    <color name="widget_text">#FFE6E3E1</color>
+    <color name="widget_progress_track">#FF26282C</color>
+    <color name="widget_secondary_text">#FF7A7873</color>
+    <color name="widget_healthy">#FF6FDBC4</color>
+    <color name="widget_elevated">#FFF4C044</color>
+    <color name="widget_high">#FFFFB59A</color>
+
+    <!-- Four-limit widget (design option 10a) -->
+    <color name="four_limit_normal">#FF6FDBC4</color>
+    <color name="four_limit_elevated">#FFF4C044</color>
+    <color name="four_limit_high">#FFFFB59A</color>
+    <color name="four_limit_critical">#FFFFB4AB</color>
+    <color name="four_limit_claude">#FFFFB786</color>
+    <color name="four_limit_codex">#FFAFC6FF</color>
+    <color name="four_limit_grok">#FFE3B7F5</color>
     <color name="provider_claude_icon">#FFFFB786</color>
     <color name="provider_codex_icon">#FFAFC6FF</color>
     <color name="provider_grok_icon">#FFE3B7F5</color>

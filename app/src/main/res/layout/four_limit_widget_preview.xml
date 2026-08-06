@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@string/four_limit_preview_session"
+            android:src="@drawable/ic_provider_claude"
+            android:tint="@color/four_limit_claude" />
+
+        <TextView
+            android:layout_width="66dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/four_limit_preview_session"
+            android:textColor="@color/widget_text"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="106dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/four_limit_bar_track">
+
+            <View
+                android:layout_width="69dp"
+                android:layout_height="7dp"
+                android:background="@drawable/four_limit_bar_elevated" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="53dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="79.5dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="95.4dp"
+                android:background="@color/widget_background" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_session_value"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_session_reset"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="9dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:alpha="0.5"
+            android:contentDescription="@string/four_limit_preview_claude_weekly"
+            android:src="@drawable/ic_provider_claude"
+            android:tint="@color/four_limit_claude" />
+
+        <TextView
+            android:layout_width="66dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/four_limit_preview_claude_weekly"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+
+        <FrameLayout
+            android:layout_width="106dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/four_limit_bar_track">
+
+            <View
+                android:layout_width="24.4dp"
+                android:layout_height="7dp"
+                android:background="@drawable/four_limit_bar_normal" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="53dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="79.5dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="95.4dp"
+                android:background="@color/widget_background" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_claude_value"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_claude_reset"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="9dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@string/four_limit_preview_codex_weekly"
+            android:src="@drawable/ic_provider_codex"
+            android:tint="@color/four_limit_codex" />
+
+        <TextView
+            android:layout_width="66dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/four_limit_preview_codex_weekly"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+
+        <FrameLayout
+            android:layout_width="106dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/four_limit_bar_track">
+
+            <View
+                android:layout_width="44.5dp"
+                android:layout_height="7dp"
+                android:background="@drawable/four_limit_bar_normal" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="53dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="79.5dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="95.4dp"
+                android:background="@color/widget_background" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_codex_value"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_codex_reset"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="9dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@string/four_limit_preview_grok_weekly"
+            android:src="@drawable/ic_provider_grok"
+            android:tint="@color/four_limit_grok" />
+
+        <TextView
+            android:layout_width="66dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/four_limit_preview_grok_weekly"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+
+        <FrameLayout
+            android:layout_width="106dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/four_limit_bar_track">
+
+            <View
+                android:layout_width="85.9dp"
+                android:layout_height="7dp"
+                android:background="@drawable/four_limit_bar_high" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="53dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="79.5dp"
+                android:background="@color/widget_background" />
+
+            <View
+                android:layout_width="1.5dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="95.4dp"
+                android:background="@color/widget_background" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_grok_value"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:gravity="end"
+            android:text="@string/four_limit_preview_grok_reset"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="14dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <View
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:background="@drawable/four_limit_widget_sync_dot" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="@string/four_limit_preview_synced"
+            android:textColor="@color/widget_secondary_text"
+            android:textSize="10sp" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:contentDescription="@string/four_limit_preview_worst"
+            android:src="@drawable/ic_guardrail_high"
+            android:tint="@color/four_limit_high" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:text="@string/four_limit_preview_worst"
+            android:textColor="@color/four_limit_high"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,15 +1,11 @@
 package com.qbapps.claudeusage.ui.dashboard.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -18,14 +14,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.qbapps.claudeusage.domain.model.UsageMetric
 import com.qbapps.claudeusage.ui.components.ProviderBrand
 import com.qbapps.claudeusage.ui.components.ProviderMark
+import com.qbapps.claudeusage.ui.components.UsageIndicator
+import com.qbapps.claudeusage.ui.components.UsageIndicatorStyle
+import com.qbapps.claudeusage.ui.theme.OpenUsageShape
+import com.qbapps.claudeusage.ui.theme.OpenUsageText
 import com.qbapps.claudeusage.ui.theme.grokAccentColor
 import java.time.Duration
 import java.time.Instant
@@ -39,6 +37,7 @@ fun CodexWeeklyCard(
     metric: UsageMetric?,
     modifier: Modifier = Modifier,
     useRelativeTime: Boolean = true,
+    isStale: Boolean = false,
 ) {
     ProviderWeeklyCard(
         provider = ProviderBrand.CODEX,
@@ -47,6 +46,7 @@ fun CodexWeeklyCard(
         metric = metric,
         modifier = modifier,
         useRelativeTime = useRelativeTime,
+        isStale = isStale,
     )
 }
 
@@ -55,6 +55,7 @@ fun GrokWeeklyCard(
     metric: UsageMetric?,
     modifier: Modifier = Modifier,
     useRelativeTime: Boolean = true,
+    isStale: Boolean = false,
 ) {
     ProviderWeeklyCard(
         provider = ProviderBrand.GROK,
@@ -63,6 +64,7 @@ fun GrokWeeklyCard(
         metric = metric,
         modifier = modifier,
         useRelativeTime = useRelativeTime,
+        isStale = isStale,
     )
 }
 
@@ -74,13 +76,18 @@ private fun ProviderWeeklyCard(
     metric: UsageMetric?,
     modifier: Modifier = Modifier,
     useRelativeTime: Boolean,
+    isStale: Boolean,
 ) {
     val utilization = metric?.effectiveUtilization()?.coerceIn(0.0, 100.0)
-    val status = metric.headroomStatus()
+    val status = if (isStale && metric != null) {
+        HeadroomStatus.STALE
+    } else {
+        metric.headroomStatus()
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = OpenUsageShape.card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
         Column(
@@ -111,9 +118,7 @@ private fun ProviderWeeklyCard(
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             text = utilization?.roundToInt()?.toString() ?: "—",
-                            fontSize = 44.sp,
-                            lineHeight = 46.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            style = OpenUsageText.metricLarge,
                         )
                         Text(
                             text = "% used",
@@ -129,11 +134,13 @@ private fun ProviderWeeklyCard(
                     )
                 }
 
-                FlatUsageBar(
+                UsageIndicator(
                     progress = ((utilization ?: 0.0) / 100.0).toFloat(),
                     color = accent,
-                    showThresholds = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    style = if (isStale) UsageIndicatorStyle.STALE else UsageIndicatorStyle.FLAT,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp),
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f))
@@ -147,7 +154,7 @@ private fun ProviderWeeklyCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = metric.resetLabel(useRelativeTime),
+                        text = metric.resetLabel(useRelativeTime) + if (isStale) " est." else "",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -170,55 +177,10 @@ private fun WeeklyProviderLabel(
         ProviderMark(provider = provider, tint = accent, size = 20.dp)
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = OpenUsageText.providerLabel,
             color = accent,
-            fontWeight = FontWeight.Bold,
         )
     }
-}
-
-@Composable
-internal fun FlatUsageBar(
-    progress: Float,
-    color: Color,
-    modifier: Modifier = Modifier,
-    showThresholds: Boolean = false,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(7.dp)
-            .clip(RoundedCornerShape(99.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .height(7.dp)
-                .background(color, RoundedCornerShape(99.dp)),
-        )
-        if (showThresholds) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Box(Modifier.weight(0.5f))
-                ThresholdTick()
-                Box(Modifier.weight(0.25f))
-                ThresholdTick()
-                Box(Modifier.weight(0.15f))
-                ThresholdTick()
-                Box(Modifier.weight(0.10f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThresholdTick() {
-    Box(
-        Modifier
-            .height(7.dp)
-            .size(width = 1.dp, height = 7.dp)
-            .background(MaterialTheme.colorScheme.surfaceContainerLowest),
-    )
 }
 
 internal fun UsageMetric?.resetLabel(useRelativeTime: Boolean): String {

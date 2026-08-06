@@ -13,14 +13,26 @@
     <!-- Launcher icon -->
     <color name="ic_launcher_background">#FF111214</color>
     <color name="provider_claude_icon">#FF8F5024</color>
-    <color name="provider_codex_icon">#FF3A5BA0</color>
+    <color name="provider_codex_icon">#FF2E4B87</color>
     <color name="provider_grok_icon">#FF7B3F9E</color>
 
     <!-- Widget -->
     <color name="widget_background">#FFFFFFFF</color>
-    <color name="widget_background_dark">#FF1C1B1F</color>
     <color name="widget_text">#FF1C1B1F</color>
     <color name="widget_text_dark">#FFE6E1E5</color>
-    <color name="widget_progress_track">#FFE0E0E0</color>
+    <color name="widget_progress_track">#FFDFDCD6</color>
+    <color name="widget_secondary_text">#FF6B6864</color>
+    <color name="widget_healthy">#FF0E6B57</color>
+    <color name="widget_elevated">#FF9A6B00</color>
+    <color name="widget_high">#FF99400F</color>
+
+    <!-- Four-limit widget (design option 10a) -->
+    <color name="four_limit_normal">#FF10695B</color>
+    <color name="four_limit_elevated">#FF7A5900</color>
+    <color name="four_limit_high">#FF99400F</color>
+    <color name="four_limit_critical">#FFA8261F</color>
+    <color name="four_limit_claude">#FF8F5024</color>
+    <color name="four_limit_codex">#FF3A5BA0</color>
+    <color name="four_limit_grok">#FF7B3F9E</color>
     <color name="widget_progress_track_dark">#FF3C3C3C</color>
 </resources>

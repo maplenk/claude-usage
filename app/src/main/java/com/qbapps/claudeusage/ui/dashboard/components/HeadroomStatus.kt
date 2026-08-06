@@ -3,65 +3,53 @@ package com.qbapps.claudeusage.ui.dashboard.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.qbapps.claudeusage.domain.model.UsageMetric
-import com.qbapps.claudeusage.ui.theme.statusCriticalColor
-import com.qbapps.claudeusage.ui.theme.statusCriticalContainerColor
-import com.qbapps.claudeusage.ui.theme.statusHighColor
-import com.qbapps.claudeusage.ui.theme.statusHighContainerColor
-import com.qbapps.claudeusage.ui.theme.statusModerateColor
-import com.qbapps.claudeusage.ui.theme.statusModerateContainerColor
-import com.qbapps.claudeusage.ui.theme.statusSafeColor
-import com.qbapps.claudeusage.ui.theme.statusSafeContainerColor
-import com.qbapps.claudeusage.ui.theme.statusUnknownColor
-import com.qbapps.claudeusage.ui.theme.statusUnknownContainerColor
+import com.qbapps.claudeusage.ui.theme.Guardrail
+import com.qbapps.claudeusage.ui.theme.OpenUsageText
+import com.qbapps.claudeusage.ui.theme.colors
 
 internal enum class HeadroomStatus(
     val label: String,
-    val glyph: String,
+    val guardrail: Guardrail,
 ) {
-    NORMAL("NORMAL", "●"),
-    ELEVATED("ELEVATED", "◐"),
-    HIGH("HIGH", "◆"),
-    CRITICAL("CRITICAL", "▲"),
-    STALE("STALE", "◷"),
+    NORMAL("NORMAL", Guardrail.Normal),
+    ELEVATED("ELEVATED", Guardrail.Elevated),
+    HIGH("HIGH", Guardrail.High),
+    CRITICAL("CRITICAL", Guardrail.Critical),
+    STALE("STALE", Guardrail.Unknown),
 }
 
 internal fun UsageMetric?.headroomStatus(): HeadroomStatus = when {
     this == null || isExpired() -> HeadroomStatus.STALE
-    effectiveUtilization() >= 90.0 -> HeadroomStatus.CRITICAL
-    effectiveUtilization() >= 75.0 -> HeadroomStatus.HIGH
-    effectiveUtilization() >= 50.0 -> HeadroomStatus.ELEVATED
+    effectiveUtilization() >= Guardrail.CRITICAL_AT -> HeadroomStatus.CRITICAL
+    effectiveUtilization() >= Guardrail.HIGH_AT -> HeadroomStatus.HIGH
+    effectiveUtilization() >= Guardrail.ELEVATED_AT -> HeadroomStatus.ELEVATED
     else -> HeadroomStatus.NORMAL
 }
 
 @Composable
-internal fun HeadroomStatus.foreground(): Color = when (this) {
-    HeadroomStatus.NORMAL -> statusSafeColor
-    HeadroomStatus.ELEVATED -> statusModerateColor
-    HeadroomStatus.HIGH -> statusHighColor
-    HeadroomStatus.CRITICAL -> statusCriticalColor
-    HeadroomStatus.STALE -> statusUnknownColor
-}
+internal fun HeadroomStatus.foreground(): Color = guardrail.colors().fg
 
 @Composable
-private fun HeadroomStatus.container(): Color = when (this) {
-    HeadroomStatus.NORMAL -> statusSafeContainerColor
-    HeadroomStatus.ELEVATED -> statusModerateContainerColor
-    HeadroomStatus.HIGH -> statusHighContainerColor
-    HeadroomStatus.CRITICAL -> statusCriticalContainerColor
-    HeadroomStatus.STALE -> statusUnknownContainerColor
-}
+private fun HeadroomStatus.container(): Color = guardrail.colors().container
 
+/**
+ * Status chip: 26dp tall, full radius, vector glyph + word — never colour-only.
+ * Non-interactive; contributes to the parent card's merged semantics.
+ */
 @Composable
 internal fun HeadroomStatusChip(
     status: HeadroomStatus,
@@ -69,21 +57,26 @@ internal fun HeadroomStatusChip(
 ) {
     Row(
         modifier = modifier
+            .height(26.dp)
             .background(status.container(), RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 11.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = status.glyph,
-            style = MaterialTheme.typography.labelSmall,
-            color = status.foreground(),
+        Icon(
+            painter = painterResource(status.guardrail.glyphRes),
+            contentDescription = null, // the word carries the meaning
+            tint = status.foreground(),
+            modifier = Modifier.size(11.dp),
         )
         Text(
             text = status.label,
-            style = MaterialTheme.typography.labelSmall,
+            style = OpenUsageText.statusLabel,
             color = status.foreground(),
-            fontWeight = FontWeight.Bold,
         )
     }
 }
+
+/** Legacy call sites that still reach for [MaterialTheme] colours by status. */
+@Composable
+internal fun HeadroomStatus.foregroundColor(): Color = foreground()

@@ -35,13 +35,21 @@ This utility keeps the important provider limits together on your home screen:
 
 ## Widgets
 
-One responsive widget scales across three useful launcher sizes:
+The launcher picker offers two independent home-screen widgets:
 
-- **2×2**: four compact usage rings for Claude session, Claude weekly, Codex weekly, and Grok weekly
-- **4×2**: four provider rows with usage bars, percentages, reset times, and sync status (recommended)
-- **4×3**: a larger Claude session hero plus Claude, Codex, and Grok weekly rows
+1. **OpenUsage** — the existing responsive provider overview, which scales across four launcher sizes:
 
-Disconnected providers stay visible with a setup prompt, so the layout remains stable.
+- **2×2**: three equal weekly provider rows; Claude's five-hour session appears as a thin live rail
+- **4×1**: the same three provider values in a compact horizontal strip
+- **4×2**: adds weekly reset times and last-sync status (recommended)
+- **4×3**: adds breathing room and a manual-refresh control
+
+2. **OpenUsage · Four limits** — a fixed 4×2 view with separate rows for Claude session, Claude
+   weekly, Codex weekly, and Grok weekly. Each row shows its provider mark, used percentage,
+   severity bar, and reset time; the footer shows freshness and the highest-risk limit.
+
+Both options read the same local cache and refresh together. Disconnected providers keep their slot
+with a setup action so the layout never jumps.
 
 ## Download APK
 
@@ -162,20 +170,24 @@ cc-usage/
         │   │           ├── SessionKeyInput.kt    # Password field with paste + visibility toggle
         │   │           └── RefreshIntervalSlider.kt  # 5–300 second slider
         │   │
-        │   ├── widget/                    # Glance home screen widget
-        │   │   ├── UsageWidget.kt               # GlanceAppWidget, SizeMode.Responsive (3 sizes)
-        │   │   ├── UsageWidgetContent.kt        # Widget composable: progress bars, status colors
-        │   │   ├── UsageWidgetReceiver.kt       # GlanceAppWidgetReceiver
+        │   ├── widget/                    # Glance home-screen widgets
+        │   │   ├── UsageWidget.kt               # Existing responsive provider overview
+        │   │   ├── UsageWidgetContent.kt        # Existing overview composable
+        │   │   ├── UsageWidgetReceiver.kt       # Existing overview receiver
+        │   │   ├── FourLimitUsageWidget.kt      # Fixed 4×2 four-limit widget
+        │   │   ├── FourLimitWidgetContent.kt    # Option 10a four-row composable
+        │   │   ├── FourLimitUsageWidgetReceiver.kt # Separate widget-picker receiver
         │   │   ├── UsageWidgetStateDefinition.kt # Separate DataStore for widget state
         │   │   ├── WidgetActionCallback.kt      # Tap → open app, refresh button
-        │   │   └── WidgetDataPusher.kt          # Pushes usage data into all widget instances
+        │   │   └── WidgetDataPusher.kt          # Pushes usage data into both widget types
         │   │
         │   └── worker/                    # Background sync
         │       ├── UsageSyncWorker.kt           # @HiltWorker, fetches + re-enqueues
         │       └── WorkManagerScheduler.kt      # Schedules OneTimeWork chain + 15-min periodic fallback
         │
         └── res/
-            ├── xml/usage_widget_info.xml        # Widget provider metadata (sizes, preview)
+            ├── xml/usage_widget_info.xml        # Existing responsive widget metadata
+            ├── xml/four_limit_widget_info.xml   # Fixed 4×2 widget metadata
             ├── layout/glance_default_loading_layout.xml
             ├── drawable/
             │   ├── widget_background.xml        # Light mode rounded rect
@@ -240,6 +252,9 @@ The multi-provider usage approach and direct provider integration research were 
 [OpenUsage by Robin Ebers](https://github.com/robinebers/openusage). This Android project is an
 independent implementation tailored to its dashboard and home-screen widgets.
 
+Provider marks are used only to identify compatible services. See [TRADEMARKS.md](TRADEMARKS.md)
+for ownership and non-affiliation notices.
+
 ## Key Dependencies
 
 All versions managed in `gradle/libs.versions.toml`:
@@ -273,7 +288,7 @@ All versions managed in `gradle/libs.versions.toml`:
 3. Tap Validate → fetches organizations → select org
 4. Optionally connect Codex and Grok from their device-login cards
 5. Dashboard shows every connected provider and the widget starts updating
-6. Add the OpenUsage widget to the home screen from the widget picker
+6. Add either OpenUsage widget to the home screen from the widget picker
 
 To add Codex weekly usage, open Settings → Codex → **Connect Codex**, copy the one-time code,
 complete sign-in in the browser, and return to the app. The phone then refreshes Codex independently

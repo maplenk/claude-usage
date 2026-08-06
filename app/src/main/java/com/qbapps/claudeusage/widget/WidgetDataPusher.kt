@@ -61,6 +61,7 @@ private suspend fun updateWidgetStates(
         preferences.toMutablePreferences().apply(update)
     }
     UsageWidget().updateAll(context)
+    FourLimitUsageWidget().updateAll(context)
 }
 
 private fun MutablePreferences.writeMetric(
