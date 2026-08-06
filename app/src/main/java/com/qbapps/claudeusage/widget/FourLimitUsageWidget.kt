@@ -1,8 +1,6 @@
 package com.qbapps.claudeusage.widget
 
 import android.content.Context
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
@@ -13,9 +11,9 @@ import androidx.glance.currentState
 /** The independent 4×2 widget represented by option 10a in the design handoff. */
 class FourLimitUsageWidget : GlanceAppWidget() {
 
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(DpSize(340.dp, 162.dp))
-    )
+    // Render against the launcher's actual bounds. A single responsive size would
+    // preserve a 340×162 RemoteViews snapshot inside larger launcher allocations.
+    override val sizeMode: SizeMode = SizeMode.Exact
     override val stateDefinition = UsageWidgetStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {

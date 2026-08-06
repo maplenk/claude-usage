@@ -13,6 +13,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -62,6 +63,7 @@ internal fun FourLimitWidgetContent(data: HeadroomWidgetData?) {
     val displayData = data ?: HeadroomWidgetData(claude = null, codex = null, grok = null)
     val stale = data == null || displayData.isFourLimitStale
     val offline = !hasFourLimitNetwork(LocalContext.current)
+    val layout = fourLimitLayout(LocalSize.current.width, LocalSize.current.height)
 
     Box(
         modifier = GlanceModifier
@@ -72,25 +74,36 @@ internal fun FourLimitWidgetContent(data: HeadroomWidgetData?) {
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = GlanceModifier.fillMaxSize().padding(16.dp),
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = layout.verticalPadding),
         ) {
             displayData.fourLimitRows.forEachIndexed { index, metric ->
-                if (index > 0) Spacer(GlanceModifier.height(9.dp))
-                FourLimitMetricRow(metric = metric, stale = stale)
+                if (index > 0) Spacer(GlanceModifier.height(layout.rowGap))
+                FourLimitMetricRow(metric = metric, stale = stale, layout = layout)
             }
             Spacer(GlanceModifier.defaultWeight())
-            FourLimitFooter(data = displayData, stale = stale, offline = offline)
+            FourLimitFooter(
+                data = displayData,
+                stale = stale,
+                offline = offline,
+                height = layout.footerHeight,
+            )
         }
     }
 }
 
 @Composable
-private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
+private fun FourLimitMetricRow(
+    metric: FourLimitWidgetMetric,
+    stale: Boolean,
+    layout: FourLimitLayout,
+) {
     val percent = metric.usedPercent
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(20.dp)
+            .height(layout.rowHeight)
             .clickable(fourLimitAction(metric))
             .semantics { contentDescription = metric.fourLimitAccessibilityLabel() },
         verticalAlignment = Alignment.CenterVertically,
@@ -107,10 +120,10 @@ private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
                 }
             ),
         )
-        Spacer(GlanceModifier.width(10.dp))
+        Spacer(GlanceModifier.width(layout.gap))
         Text(
             text = metric.label,
-            modifier = GlanceModifier.width(66.dp),
+            modifier = GlanceModifier.width(layout.labelWidth),
             style = TextStyle(
                 color = if (stale) FourLimitUnknown else if (metric.isSession) {
                     FourLimitPrimary
@@ -121,11 +134,12 @@ private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
                 fontWeight = if (metric.isSession) FontWeight.Bold else FontWeight.Normal,
             ),
         )
-        Spacer(GlanceModifier.width(10.dp))
+        Spacer(GlanceModifier.width(layout.gap))
 
         if (percent == null) {
             Box(
-                modifier = GlanceModifier.width(152.dp),
+                modifier = GlanceModifier
+                    .width(layout.barWidth + layout.valueWidth + layout.gap),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
@@ -133,11 +147,11 @@ private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
                     style = TextStyle(color = FourLimitSecondary, fontSize = 10.5.sp),
                 )
             }
-            Spacer(GlanceModifier.width(10.dp))
+            Spacer(GlanceModifier.width(layout.gap))
             Box(
                 modifier = GlanceModifier
-                    .width(44.dp)
-                    .height(20.dp)
+                    .width(layout.resetWidth)
+                    .height(layout.rowHeight)
                     .clickable(actionRunCallback<OpenSettingsActionCallback>()),
                 contentAlignment = Alignment.CenterEnd,
             ) {
@@ -151,25 +165,25 @@ private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
                 )
             }
         } else {
-            FourLimitUsageBar(percent = percent, stale = stale)
-            Spacer(GlanceModifier.width(10.dp))
+            FourLimitUsageBar(percent = percent, stale = stale, width = layout.barWidth)
+            Spacer(GlanceModifier.width(layout.gap))
             Text(
                 text = "$percent%",
-                modifier = GlanceModifier.width(36.dp),
+                modifier = GlanceModifier.width(layout.valueWidth),
                 style = TextStyle(
                     color = if (stale) FourLimitUnknown else FourLimitPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 ),
             )
-            Spacer(GlanceModifier.width(10.dp))
+            Spacer(GlanceModifier.width(layout.gap))
             Text(
                 text = formatFourLimitReset(
                     resetsAt = metric.metric?.resetsAt,
                     stale = stale,
                     compact = metric.isSession,
                 ),
-                modifier = GlanceModifier.width(44.dp),
+                modifier = GlanceModifier.width(layout.resetWidth),
                 style = TextStyle(
                     color = if (stale) FourLimitUnknown else FourLimitSecondary,
                     fontSize = 10.5.sp,
@@ -180,8 +194,7 @@ private fun FourLimitMetricRow(metric: FourLimitWidgetMetric, stale: Boolean) {
 }
 
 @Composable
-private fun FourLimitUsageBar(percent: Int, stale: Boolean) {
-    val width = 106.dp
+private fun FourLimitUsageBar(percent: Int, stale: Boolean, width: Dp) {
     val height = 7.dp
     Box(
         modifier = GlanceModifier
@@ -234,7 +247,12 @@ private fun FourLimitThresholdTicks(width: Dp, height: Dp) {
 }
 
 @Composable
-private fun FourLimitFooter(data: HeadroomWidgetData, stale: Boolean, offline: Boolean) {
+private fun FourLimitFooter(
+    data: HeadroomWidgetData,
+    stale: Boolean,
+    offline: Boolean,
+    height: Dp,
+) {
     val worst = data.fourLimitRows.maxByOrNull { it.usedPercent ?: -1 }
     val worstPercent = worst?.usedPercent
     val footerText = when {
@@ -244,7 +262,7 @@ private fun FourLimitFooter(data: HeadroomWidgetData, stale: Boolean, offline: B
     }
     val baseModifier = GlanceModifier
         .fillMaxWidth()
-        .height(14.dp)
+        .height(height)
         .semantics { contentDescription = footerText }
     val modifier = if (stale || offline) {
         baseModifier.clickable(actionRunCallback<RefreshActionCallback>())
@@ -287,6 +305,41 @@ private fun FourLimitFooter(data: HeadroomWidgetData, stale: Boolean, offline: B
             }
         }
     }
+}
+
+private data class FourLimitLayout(
+    val gap: Dp,
+    val labelWidth: Dp,
+    val barWidth: Dp,
+    val valueWidth: Dp,
+    val resetWidth: Dp,
+    val rowHeight: Dp,
+    val rowGap: Dp,
+    val footerHeight: Dp,
+    val verticalPadding: Dp,
+)
+
+private fun fourLimitLayout(width: Dp, height: Dp): FourLimitLayout {
+    val compactWidth = width < 320.dp
+    val gap = if (compactWidth) 6.dp else 10.dp
+    val labelWidth = if (compactWidth) 54.dp else 66.dp
+    val valueWidth = if (compactWidth) 32.dp else 36.dp
+    val resetWidth = if (compactWidth) 38.dp else 44.dp
+    val fixedWidth = 32.dp + 16.dp + (gap * 4) + labelWidth + valueWidth + resetWidth
+    val barWidth = (width - fixedWidth).coerceAtLeast(36.dp)
+    val compactHeight = height < 150.dp
+
+    return FourLimitLayout(
+        gap = gap,
+        labelWidth = labelWidth,
+        barWidth = barWidth,
+        valueWidth = valueWidth,
+        resetWidth = resetWidth,
+        rowHeight = if (compactHeight) 16.dp else 20.dp,
+        rowGap = if (compactHeight) 5.dp else 9.dp,
+        footerHeight = if (compactHeight) 12.dp else 14.dp,
+        verticalPadding = if (compactHeight) 8.dp else 16.dp,
+    )
 }
 
 private fun fourLimitAction(metric: FourLimitWidgetMetric): Action =
