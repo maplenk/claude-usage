@@ -85,7 +85,7 @@ class GrokUsageRepositoryImpl @Inject constructor(
 
     override suspend fun fetchWeekly(urgent: Boolean): Result<GrokUsage> = runCatching {
         val nowMs = System.currentTimeMillis()
-        if (!urgent && nowMs - lastFetchTimeMs < MIN_FETCH_INTERVAL_MS) {
+        val usage = if (!urgent && nowMs - lastFetchTimeMs < MIN_FETCH_INTERVAL_MS) {
             dataStore.cachedUsage.first() ?: error("Grok usage has not been fetched yet.")
         } else {
             var tokens = validTokens()
@@ -100,10 +100,11 @@ class GrokUsageRepositoryImpl @Inject constructor(
             val usage = response.body()?.toGrokWeeklyDomain()
                 ?: error("Grok billing response was empty.")
             dataStore.save(usage)
-            runCatching { pushGrokDataToWidgets(context, usage) }
             lastFetchTimeMs = nowMs
             usage
         }
+        runCatching { pushGrokDataToWidgets(context, usage) }
+        usage
     }
 
     override suspend fun disconnect() {

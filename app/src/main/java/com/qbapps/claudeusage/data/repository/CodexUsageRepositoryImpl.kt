@@ -110,7 +110,7 @@ class CodexUsageRepositoryImpl @Inject constructor(
 
     override suspend fun fetchWeekly(urgent: Boolean): Result<CodexUsage> = runCatching {
         val nowMs = System.currentTimeMillis()
-        if (!urgent && nowMs - lastFetchTimeMs < MIN_FETCH_INTERVAL_MS) {
+        val usage = if (!urgent && nowMs - lastFetchTimeMs < MIN_FETCH_INTERVAL_MS) {
             dataStore.cachedUsage.first()
                 ?: error("Codex usage has not been fetched yet.")
         } else {
@@ -133,9 +133,10 @@ class CodexUsageRepositoryImpl @Inject constructor(
                 ?: error("Codex weekly limit was not present in the response.")
             dataStore.save(usage)
             lastFetchTimeMs = nowMs
-            runCatching { pushCodexDataToWidgets(context, usage) }
             usage
         }
+        runCatching { pushCodexDataToWidgets(context, usage) }
+        usage
     }
 
     override suspend fun disconnect() {

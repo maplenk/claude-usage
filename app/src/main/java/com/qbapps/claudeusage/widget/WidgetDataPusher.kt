@@ -2,8 +2,6 @@ package com.qbapps.claudeusage.widget
 
 import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import com.qbapps.claudeusage.domain.model.ClaudeUsage
 import com.qbapps.claudeusage.domain.model.CodexUsage
@@ -55,11 +53,12 @@ private suspend fun updateWidgetStates(
     context: Context,
     update: MutablePreferences.() -> Unit,
 ) {
-    val manager = GlanceAppWidgetManager(context)
-    manager.getGlanceIds(UsageWidget::class.java).forEach { glanceId ->
-        updateAppWidgetState(context, UsageWidgetStateDefinition, glanceId) { prefs ->
-            prefs.toMutablePreferences().apply(update)
-        }
+    val dataStore = UsageWidgetStateDefinition.getDataStore(
+        context = context.applicationContext,
+        fileKey = UsageWidget::class.java.name,
+    )
+    dataStore.updateData { preferences ->
+        preferences.toMutablePreferences().apply(update)
     }
     UsageWidget().updateAll(context)
 }
