@@ -13,8 +13,11 @@ import com.qbapps.claudeusage.data.remote.GrokTokenResponseDto
 import com.qbapps.claudeusage.domain.model.GrokDeviceCode
 import com.qbapps.claudeusage.domain.model.GrokUsage
 import com.qbapps.claudeusage.domain.repository.GrokUsageRepository
+import com.qbapps.claudeusage.notification.WeeklyLimit
+import com.qbapps.claudeusage.notification.WeeklyThresholdNotifier
 import com.qbapps.claudeusage.widget.clearGrokWidgetData
 import com.qbapps.claudeusage.widget.pushGrokDataToWidgets
+import com.qbapps.claudeusage.worker.SyncLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,6 +33,7 @@ class GrokUsageRepositoryImpl @Inject constructor(
     private val api: GrokApiService,
     private val credentialStore: SecureCredentialStore,
     private val dataStore: GrokUsageDataStore,
+    private val weeklyThresholdNotifier: WeeklyThresholdNotifier,
 ) : GrokUsageRepository {
     override val cachedUsage: Flow<GrokUsage?> = dataStore.cachedUsage
 
@@ -101,6 +105,13 @@ class GrokUsageRepositoryImpl @Inject constructor(
                 ?: error("Grok billing response was empty.")
             dataStore.save(usage)
             lastFetchTimeMs = nowMs
+            runCatching { weeklyThresholdNotifier.evaluate(WeeklyLimit.GROK_WEEKLY, usage.weekly) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "weekly limit notification skipped: ${error.message ?: "unknown"}"
+                    )
+                }
             usage
         }
         runCatching { pushGrokDataToWidgets(context, usage) }

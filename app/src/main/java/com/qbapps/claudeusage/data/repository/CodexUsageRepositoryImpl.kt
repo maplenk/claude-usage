@@ -19,8 +19,11 @@ import com.qbapps.claudeusage.data.remote.CodexUsageApiService
 import com.qbapps.claudeusage.domain.model.CodexDeviceCode
 import com.qbapps.claudeusage.domain.model.CodexUsage
 import com.qbapps.claudeusage.domain.repository.CodexUsageRepository
+import com.qbapps.claudeusage.notification.WeeklyLimit
+import com.qbapps.claudeusage.notification.WeeklyThresholdNotifier
 import com.qbapps.claudeusage.widget.clearCodexWidgetData
 import com.qbapps.claudeusage.widget.pushCodexDataToWidgets
+import com.qbapps.claudeusage.worker.SyncLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.util.Base64
@@ -39,6 +42,7 @@ class CodexUsageRepositoryImpl @Inject constructor(
     private val usageApi: CodexUsageApiService,
     private val credentialStore: SecureCredentialStore,
     private val dataStore: CodexUsageDataStore,
+    private val weeklyThresholdNotifier: WeeklyThresholdNotifier,
 ) : CodexUsageRepository {
     override val cachedUsage: Flow<CodexUsage?> = dataStore.cachedUsage
 
@@ -133,6 +137,13 @@ class CodexUsageRepositoryImpl @Inject constructor(
                 ?: error("Codex weekly limit was not present in the response.")
             dataStore.save(usage)
             lastFetchTimeMs = nowMs
+            runCatching { weeklyThresholdNotifier.evaluate(WeeklyLimit.CODEX_WEEKLY, usage.weekly) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "weekly limit notification skipped: ${error.message ?: "unknown"}"
+                    )
+                }
             usage
         }
         runCatching { pushCodexDataToWidgets(context, usage) }

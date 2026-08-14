@@ -32,6 +32,7 @@ data class SettingsUiState(
     val refreshInterval: Int = UserPreferencesStore.DEFAULT_REFRESH_INTERVAL_SECONDS,
     val notifyOnReset: Boolean = true,
     val notifyOnUsageThresholds: Boolean = true,
+    val notifyOnWeeklyLimits: Boolean = true,
     val showPersistentNotification: Boolean = false,
     val useRelativeTime: Boolean = true,
     val isValidating: Boolean = false,
@@ -311,6 +312,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun toggleNotifyOnWeeklyLimits(enabled: Boolean) {
+        _uiState.update { it.copy(notifyOnWeeklyLimits = enabled) }
+        viewModelScope.launch {
+            preferencesStore.saveNotifyOnWeeklyLimits(enabled)
+        }
+    }
+
     fun togglePersistentNotification(enabled: Boolean) {
         _uiState.update { it.copy(showPersistentNotification = enabled) }
         viewModelScope.launch {
@@ -343,6 +351,7 @@ class SettingsViewModel @Inject constructor(
                 refreshInterval = it.refreshInterval,
                 notifyOnReset = it.notifyOnReset,
                 notifyOnUsageThresholds = it.notifyOnUsageThresholds,
+                notifyOnWeeklyLimits = it.notifyOnWeeklyLimits,
             )
         }
     }
@@ -373,6 +382,7 @@ class SettingsViewModel @Inject constructor(
             val interval = preferencesStore.refreshIntervalSeconds.first()
             val notifyOnReset = preferencesStore.notifyOnSessionReset.first()
             val notifyOnUsageThresholds = preferencesStore.notifyOnUsageThresholds.first()
+            val notifyOnWeeklyLimits = preferencesStore.notifyOnWeeklyLimits.first()
             val showPersistent = preferencesStore.showPersistentNotification.first()
             val useRelativeTime = preferencesStore.useRelativeTime.first()
             _uiState.update {
@@ -380,6 +390,7 @@ class SettingsViewModel @Inject constructor(
                     refreshInterval = interval,
                     notifyOnReset = notifyOnReset,
                     notifyOnUsageThresholds = notifyOnUsageThresholds,
+                    notifyOnWeeklyLimits = notifyOnWeeklyLimits,
                     showPersistentNotification = showPersistent,
                     useRelativeTime = useRelativeTime,
                 )

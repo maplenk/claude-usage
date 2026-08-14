@@ -378,6 +378,21 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Text(
+                            text = stringResource(R.string.notify_weekly_limits),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Switch(
+                            checked = state.notifyOnWeeklyLimits,
+                            onCheckedChange = viewModel::toggleNotifyOnWeeklyLimits,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Persistent status bar",
