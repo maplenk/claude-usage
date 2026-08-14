@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -82,13 +83,15 @@ internal fun FourLimitWidgetContent(data: HeadroomWidgetData?) {
                 if (index > 0) Spacer(GlanceModifier.height(layout.rowGap))
                 FourLimitMetricRow(metric = metric, stale = stale, layout = layout)
             }
-            Spacer(GlanceModifier.defaultWeight())
-            FourLimitFooter(
-                data = displayData,
-                stale = stale,
-                offline = offline,
-                height = layout.footerHeight,
-            )
+            if (layout.showFooter) {
+                Spacer(GlanceModifier.defaultWeight())
+                FourLimitFooter(
+                    data = displayData,
+                    stale = stale,
+                    offline = offline,
+                    height = layout.footerHeight,
+                )
+            }
         }
     }
 }
@@ -172,7 +175,7 @@ private fun FourLimitMetricRow(
                 modifier = GlanceModifier.width(layout.valueWidth),
                 style = TextStyle(
                     color = if (stale) FourLimitUnknown else FourLimitPrimary,
-                    fontSize = 14.sp,
+                    fontSize = layout.valueFontSize,
                     fontWeight = FontWeight.Bold,
                 ),
             )
@@ -307,7 +310,7 @@ private fun FourLimitFooter(
     }
 }
 
-private data class FourLimitLayout(
+internal data class FourLimitLayout(
     val gap: Dp,
     val labelWidth: Dp,
     val barWidth: Dp,
@@ -317,9 +320,11 @@ private data class FourLimitLayout(
     val rowGap: Dp,
     val footerHeight: Dp,
     val verticalPadding: Dp,
+    val valueFontSize: TextUnit,
+    val showFooter: Boolean,
 )
 
-private fun fourLimitLayout(width: Dp, height: Dp): FourLimitLayout {
+internal fun fourLimitLayout(width: Dp, height: Dp): FourLimitLayout {
     val compactWidth = width < 320.dp
     val gap = if (compactWidth) 6.dp else 10.dp
     val labelWidth = if (compactWidth) 54.dp else 66.dp
@@ -328,6 +333,8 @@ private fun fourLimitLayout(width: Dp, height: Dp): FourLimitLayout {
     val fixedWidth = 32.dp + 16.dp + (gap * 4) + labelWidth + valueWidth + resetWidth
     val barWidth = (width - fixedWidth).coerceAtLeast(36.dp)
     val compactHeight = height < 150.dp
+    // Below this the footer cannot coexist with four legible rows inside the declared 70dp minimum.
+    val ultraCompactHeight = height < 100.dp
 
     return FourLimitLayout(
         gap = gap,
@@ -335,10 +342,28 @@ private fun fourLimitLayout(width: Dp, height: Dp): FourLimitLayout {
         barWidth = barWidth,
         valueWidth = valueWidth,
         resetWidth = resetWidth,
-        rowHeight = if (compactHeight) 16.dp else 20.dp,
-        rowGap = if (compactHeight) 5.dp else 9.dp,
-        footerHeight = if (compactHeight) 12.dp else 14.dp,
-        verticalPadding = if (compactHeight) 8.dp else 16.dp,
+        rowHeight = when {
+            ultraCompactHeight -> 14.dp
+            compactHeight -> 16.dp
+            else -> 20.dp
+        },
+        rowGap = when {
+            ultraCompactHeight -> 2.dp
+            compactHeight -> 5.dp
+            else -> 9.dp
+        },
+        footerHeight = when {
+            ultraCompactHeight -> 0.dp
+            compactHeight -> 12.dp
+            else -> 14.dp
+        },
+        verticalPadding = when {
+            ultraCompactHeight -> 4.dp
+            compactHeight -> 8.dp
+            else -> 16.dp
+        },
+        valueFontSize = if (ultraCompactHeight) 12.sp else 14.sp,
+        showFooter = !ultraCompactHeight,
     )
 }
 
