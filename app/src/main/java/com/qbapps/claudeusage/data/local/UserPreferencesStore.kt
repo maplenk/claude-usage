@@ -32,6 +32,7 @@ class UserPreferencesStore @Inject constructor(
     private val selectedOrgIdKey = stringPreferencesKey("selected_org_id")
     private val notifyOnResetKey = booleanPreferencesKey("notify_on_session_reset")
     private val notifyOnUsageThresholdsKey = booleanPreferencesKey("notify_on_usage_thresholds")
+    private val notifyOnWeeklyLimitsKey = booleanPreferencesKey("notify_on_weekly_limits")
     private val lastNotifiedSessionThresholdKey = intPreferencesKey("last_notified_session_threshold")
     private val guardrailSessionEpochKey = longPreferencesKey("guardrail_session_epoch_ms")
     private val sentCapRiskKey = booleanPreferencesKey("sent_cap_risk")
@@ -51,6 +52,9 @@ class UserPreferencesStore @Inject constructor(
 
     val notifyOnUsageThresholds: Flow<Boolean> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[notifyOnUsageThresholdsKey] ?: true }
+
+    val notifyOnWeeklyLimits: Flow<Boolean> = context.userPreferencesDataStore.data
+        .map { prefs -> prefs[notifyOnWeeklyLimitsKey] ?: true }
 
     val lastNotifiedSessionThreshold: Flow<Int?> = context.userPreferencesDataStore.data
         .map { prefs -> prefs[lastNotifiedSessionThresholdKey] }
@@ -93,6 +97,12 @@ class UserPreferencesStore @Inject constructor(
         }
     }
 
+    suspend fun saveNotifyOnWeeklyLimits(enabled: Boolean) {
+        context.userPreferencesDataStore.edit { prefs ->
+            prefs[notifyOnWeeklyLimitsKey] = enabled
+        }
+    }
+
     suspend fun saveLastNotifiedSessionThreshold(threshold: Int?) {
         context.userPreferencesDataStore.edit { prefs ->
             if (threshold != null) {
@@ -112,6 +122,36 @@ class UserPreferencesStore @Inject constructor(
             }
         }
     }
+
+    /** Returns the notified threshold and window identity for a single weekly limit. */
+    suspend fun getWeeklyThresholdState(limitKey: String): WeeklyThresholdState {
+        val prefs = context.userPreferencesDataStore.data.first()
+        return WeeklyThresholdState(
+            lastNotifiedThreshold = prefs[weeklyThresholdKey(limitKey)],
+            windowResetsAtMs = prefs[weeklyWindowKey(limitKey)],
+        )
+    }
+
+    suspend fun saveWeeklyThresholdState(limitKey: String, state: WeeklyThresholdState) {
+        context.userPreferencesDataStore.edit { prefs ->
+            if (state.lastNotifiedThreshold != null) {
+                prefs[weeklyThresholdKey(limitKey)] = state.lastNotifiedThreshold
+            } else {
+                prefs.remove(weeklyThresholdKey(limitKey))
+            }
+            if (state.windowResetsAtMs != null) {
+                prefs[weeklyWindowKey(limitKey)] = state.windowResetsAtMs
+            } else {
+                prefs.remove(weeklyWindowKey(limitKey))
+            }
+        }
+    }
+
+    private fun weeklyThresholdKey(limitKey: String) =
+        intPreferencesKey("last_notified_weekly_threshold_$limitKey")
+
+    private fun weeklyWindowKey(limitKey: String) =
+        longPreferencesKey("weekly_window_resets_at_$limitKey")
 
     /** Returns the session epoch and sent-flags for guardrail dedup. */
     suspend fun getGuardrailState(): GuardrailNotificationState {
@@ -141,6 +181,11 @@ class UserPreferencesStore @Inject constructor(
         const val DEFAULT_REFRESH_INTERVAL_SECONDS = 30
     }
 }
+
+data class WeeklyThresholdState(
+    val lastNotifiedThreshold: Int?,
+    val windowResetsAtMs: Long?,
+)
 
 data class GuardrailNotificationState(
     val sessionEpochMs: Long?,

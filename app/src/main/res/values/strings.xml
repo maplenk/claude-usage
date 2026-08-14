@@ -51,9 +51,19 @@
     <string name="notification_session_reset_body">Claude is ready to use again</string>
     <string name="notification_usage_milestone_title">Session usage alert</string>
     <string name="notification_usage_milestone_body">Limit used %1$d%%</string>
+    <string name="notification_channel_weekly_limits">Weekly Limits</string>
+    <string name="notification_channel_weekly_limits_description">Notifies when a weekly usage limit crosses 70, 80, 90, or 100%</string>
+    <string name="notification_weekly_limit_title">%1$s at %2$d%%</string>
+    <string name="notification_weekly_limit_body">Weekly usage %1$d%% · resets in %2$s</string>
+    <string name="notification_weekly_limit_body_no_reset">Weekly usage %1$d%%</string>
+    <string name="weekly_limit_claude">Claude weekly limit</string>
+    <string name="weekly_limit_claude_opus">Claude weekly Opus limit</string>
+    <string name="weekly_limit_codex">Codex weekly limit</string>
+    <string name="weekly_limit_grok">Grok weekly limit</string>
 
     <!-- Settings Preferences -->
     <string name="notify_usage_milestones">Notify on usage milestones</string>
+    <string name="notify_weekly_limits">Notify on weekly limits</string>
 
     <!-- Widget -->
     <string name="widget_configure">Configure in app</string>

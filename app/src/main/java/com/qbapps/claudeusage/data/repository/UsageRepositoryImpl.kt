@@ -18,6 +18,8 @@ import com.qbapps.claudeusage.domain.model.UsageHistoryPoint
 import com.qbapps.claudeusage.domain.repository.UsageRepository
 import com.qbapps.claudeusage.notification.UsageNotificationHelper
 import com.qbapps.claudeusage.notification.UsageThresholdEvaluator
+import com.qbapps.claudeusage.notification.WeeklyLimit
+import com.qbapps.claudeusage.notification.WeeklyThresholdNotifier
 import com.qbapps.claudeusage.widget.pushDataToWidgets
 import com.qbapps.claudeusage.worker.SyncLog
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +40,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val usageHistoryStore: UsageHistoryStore,
     private val userPreferencesStore: UserPreferencesStore,
     private val notificationHelper: UsageNotificationHelper,
+    private val weeklyThresholdNotifier: WeeklyThresholdNotifier,
 ) : UsageRepository {
 
     /** Minimum interval between fetches to avoid hammering the API. */
@@ -76,6 +79,13 @@ class UsageRepositoryImpl @Inject constructor(
                     "usage milestone notification skipped: ${error.message ?: "unknown"}"
                 )
             }
+            runCatching { maybeNotifyWeeklyLimits(usage) }
+                .onFailure { error ->
+                    SyncLog.d(
+                        context,
+                        "weekly limit notifications skipped: ${error.message ?: "unknown"}"
+                    )
+                }
             usageDataStore.save(usage)
             runCatching { usageHistoryStore.append(usage) }
                 .onFailure { error ->
@@ -219,6 +229,11 @@ class UsageRepositoryImpl @Inject constructor(
         if (lastNotifiedThreshold == null || currentHighestReachedThreshold > lastNotifiedThreshold) {
             userPreferencesStore.saveLastNotifiedSessionThreshold(currentHighestReachedThreshold)
         }
+    }
+
+    private suspend fun maybeNotifyWeeklyLimits(usage: ClaudeUsage) {
+        weeklyThresholdNotifier.evaluate(WeeklyLimit.CLAUDE_WEEKLY, usage.sevenDay)
+        weeklyThresholdNotifier.evaluate(WeeklyLimit.CLAUDE_WEEKLY_OPUS, usage.sevenDayOpus)
     }
 
     private suspend fun maybeNotifyGuardrailSignals(

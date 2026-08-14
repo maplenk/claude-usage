@@ -32,12 +32,17 @@ class UsageNotificationHelper @Inject constructor(
         private const val CHANNEL_ID_USAGE_MILESTONE = "usage_milestone"
         private const val CHANNEL_ID_GUARDRAIL = "session_guardrail"
         private const val CHANNEL_ID_PERSISTENT = "persistent_usage"
+        private const val CHANNEL_ID_WEEKLY_LIMIT = "weekly_limit"
         private const val NOTIFICATION_ID_SESSION_RESET = 1001
         private const val NOTIFICATION_ID_USAGE_MILESTONE_BASE = 2000
         private const val NOTIFICATION_ID_CAP_RISK = 3001
         private const val NOTIFICATION_ID_RESET_SOON = 3002
         private const val NOTIFICATION_ID_BELOW_PACE = 3003
         const val NOTIFICATION_ID_PERSISTENT = 4001
+        private const val NOTIFICATION_ID_WEEKLY_CLAUDE_BASE = 5000
+        private const val NOTIFICATION_ID_WEEKLY_CLAUDE_OPUS_BASE = 5200
+        private const val NOTIFICATION_ID_WEEKLY_CODEX_BASE = 5400
+        private const val NOTIFICATION_ID_WEEKLY_GROK_BASE = 5600
     }
 
     fun createChannel() {
@@ -65,6 +70,14 @@ class UsageNotificationHelper @Inject constructor(
             description = "Cap risk, reset-soon, and pace alerts."
         }
 
+        val weeklyLimitChannel = NotificationChannel(
+            CHANNEL_ID_WEEKLY_LIMIT,
+            context.getString(R.string.notification_channel_weekly_limits),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = context.getString(R.string.notification_channel_weekly_limits_description)
+        }
+
         val persistentChannel = NotificationChannel(
             CHANNEL_ID_PERSISTENT,
             "Ongoing Usage Status",
@@ -78,6 +91,7 @@ class UsageNotificationHelper @Inject constructor(
             createNotificationChannel(sessionResetChannel)
             createNotificationChannel(usageMilestoneChannel)
             createNotificationChannel(guardrailChannel)
+            createNotificationChannel(weeklyLimitChannel)
             createNotificationChannel(persistentChannel)
         }
     }
@@ -129,6 +143,54 @@ class UsageNotificationHelper @Inject constructor(
             .build()
 
         val notificationId = NOTIFICATION_ID_USAGE_MILESTONE_BASE + crossedThreshold
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
+    }
+
+    fun notifyWeeklyLimit(
+        limit: WeeklyLimit,
+        currentPercent: Int,
+        crossedThreshold: Int,
+        resetsAt: Instant?,
+        now: Instant = Instant.now()
+    ) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val clampedPercent = currentPercent.coerceIn(0, 100)
+        val limitLabel = context.getString(limit.labelRes)
+        val body = if (resetsAt != null) {
+            context.getString(
+                R.string.notification_weekly_limit_body,
+                clampedPercent,
+                formatWeeklyCountdown(resetsAt, now)
+            )
+        } else {
+            context.getString(R.string.notification_weekly_limit_body_no_reset, clampedPercent)
+        }
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_WEEKLY_LIMIT)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(
+                context.getString(
+                    R.string.notification_weekly_limit_title,
+                    limitLabel,
+                    crossedThreshold
+                )
+            )
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationId = weeklyNotificationIdBase(limit) + crossedThreshold
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 
@@ -318,6 +380,26 @@ class UsageNotificationHelper @Inject constructor(
         val hours = totalMinutes / 60L
         val remaining = totalMinutes % 60L
         return if (hours > 0L) "${hours}h ${remaining}m" else "${remaining}m"
+    }
+
+    /** Weekly windows span days, so the countdown leads with days when present. */
+    private fun formatWeeklyCountdown(resetsAt: Instant, now: Instant): String {
+        val totalMinutes = Duration.between(now, resetsAt).toMinutes().coerceAtLeast(0L)
+        val days = totalMinutes / (24L * 60L)
+        val hours = (totalMinutes % (24L * 60L)) / 60L
+        val minutes = totalMinutes % 60L
+        return when {
+            days > 0L -> "${days}d ${hours}h"
+            hours > 0L -> "${hours}h ${minutes}m"
+            else -> "${minutes}m"
+        }
+    }
+
+    private fun weeklyNotificationIdBase(limit: WeeklyLimit): Int = when (limit) {
+        WeeklyLimit.CLAUDE_WEEKLY -> NOTIFICATION_ID_WEEKLY_CLAUDE_BASE
+        WeeklyLimit.CLAUDE_WEEKLY_OPUS -> NOTIFICATION_ID_WEEKLY_CLAUDE_OPUS_BASE
+        WeeklyLimit.CODEX_WEEKLY -> NOTIFICATION_ID_WEEKLY_CODEX_BASE
+        WeeklyLimit.GROK_WEEKLY -> NOTIFICATION_ID_WEEKLY_GROK_BASE
     }
 
     private fun notifyGuardrail(
